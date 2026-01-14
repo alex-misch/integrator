@@ -95,7 +95,7 @@ Page.Content = ({className, fit, ...props}) => {
       className={clsx(
         'bg-white relative rounded-t-[32px] pb-32 min-h-full',
         !fit && 'px-4',
-        // isMobile ? 'pt-24' : 'pt-5',
+        'pt-5',
         className,
       )}
     />
