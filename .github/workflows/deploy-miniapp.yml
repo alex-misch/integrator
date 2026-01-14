@@ -1,9 +1,9 @@
-name: 'Build & Deploy app'
+name: 'Build & Deploy miniapp'
 
 on:
   push:
     branches:
-      - master
+      - main
 
 env:
   API_URL: ''
