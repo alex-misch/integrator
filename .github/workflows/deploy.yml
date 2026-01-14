@@ -181,6 +181,6 @@ jobs:
       - name: Deploy
         working-directory: build/admin/app
         run: |
-          tar -czf - . | ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/miniapp.emomap.online/admin && sudo tar -xzvf -"
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo chmod -R 775 /var/www/miniapp.emomap.online/admin"
+          tar -czf - . | ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/integrate.emomap.online/admin && sudo tar -xzvf -"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo chmod -R 775 /var/www/integrate.emomap.online/admin"
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo systemctl restart nextjs"
