@@ -2,6 +2,7 @@ import {Page} from '@/components/Layout/Page.tsx';
 import {Badge} from '@/components/ui/badge';
 import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
+import {Skeleton} from '@/components/ui/skeleton';
 import {LocationIcon, SelectArrowIcon} from '@/uikit/icons';
 import {ArrowUpRight, StarIcon} from 'lucide-react';
 import {PropsWithChildren, useEffect, useMemo, useRef, useState} from 'react';
@@ -26,16 +27,14 @@ export function AtlazerPage() {
   const photosTrackWidth = 40;
   const {slug, companyId} = useMiniappParams();
   const basePath = getMiniappBasePath(slug, companyId);
-  const {data: miniapp} = useMiniappsPublicControllerBySlug(slug, companyId, {
-    query: {enabled: !!(slug && companyId)},
-  });
-  const {data: bookings = []} = useMiniappsPublicControllerBookings(
-    slug,
-    companyId,
-    {
+  const {data: miniapp, isLoading: isMiniappLoading} =
+    useMiniappsPublicControllerBySlug(slug, companyId, {
       query: {enabled: !!(slug && companyId)},
-    },
-  );
+    });
+  const {data: bookings = [], isLoading: isBookingsLoading} =
+    useMiniappsPublicControllerBookings(slug, companyId, {
+      query: {enabled: !!(slug && companyId)},
+    });
   const primaryIntegration = miniapp?.integration ?? null;
   const companies = miniapp?.companies ?? [];
   const selectedCompany =
@@ -63,6 +62,7 @@ export function AtlazerPage() {
     if (Number.isNaN(date.getTime())) return '';
     return String(date.getDate());
   }, [recordDate]);
+  const isLoading = isMiniappLoading || isBookingsLoading;
 
   const updatePhotosScroll = () => {
     const container = photosScrollRef.current;
@@ -120,47 +120,59 @@ export function AtlazerPage() {
     <Page back={false}>
       <Page.Content>
         <div className="flex gap-4 items-center pb-4">
-          {miniapp?.logo_url ? (
+          {isLoading ? (
+            <Skeleton className="w-24 h-24 rounded-ui-l" />
+          ) : miniapp?.logo_url ? (
             <img src={miniapp.logo_url} className="w-24" />
           ) : (
             <img src="/assets/atlazer-logo.png" className="w-24" />
           )}
           <div className="flex flex-col gap-1">
-            <form className="relative">
-              <label
-                htmlFor="select-city"
-                className="py-0.5 px-1.5 gap-1.5 bg-blue-500 text-white rounded-xl inline-flex items-center"
-              >
-                <p className="text-[11px] inline uppercase font-medium">
-                  {cityLabel}
+            {isLoading ? (
+              <>
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-8 w-40" />
+                <Skeleton className="h-4 w-52" />
+              </>
+            ) : (
+              <>
+                <form className="relative">
+                  <label
+                    htmlFor="select-city"
+                    className="py-0.5 px-1.5 gap-1.5 bg-blue-500 text-white rounded-xl inline-flex items-center"
+                  >
+                    <p className="text-[11px] inline uppercase font-medium">
+                      {cityLabel}
+                    </p>
+                    <SelectArrowIcon />
+                  </label>
+                  <select
+                    id="select-city"
+                    className="opacity-0 absolute top-0 left-0"
+                    value={selectedCompany ? String(selectedCompany.id) : ''}
+                    onChange={event => {
+                      const nextCompanyId = event.target.value;
+                      if (!nextCompanyId || !slug) return;
+                      navigate(getMiniappBasePath(slug, nextCompanyId));
+                    }}
+                  >
+                    {companies.length ? (
+                      companies.map(company => (
+                        <option key={company.id} value={company.id}>
+                          {company.title}
+                        </option>
+                      ))
+                    ) : (
+                      <option>Москва</option>
+                    )}
+                  </select>
+                </form>
+                <p className="text-3xl font-medium">{title}</p>
+                <p className="text-black text-sm opacity-[32%] flex gap-1 items-center">
+                  <LocationIcon /> {addressLabel}
                 </p>
-                <SelectArrowIcon />
-              </label>
-              <select
-                id="select-city"
-                className="opacity-0 absolute top-0 left-0"
-                value={selectedCompany ? String(selectedCompany.id) : ''}
-                onChange={event => {
-                  const nextCompanyId = event.target.value;
-                  if (!nextCompanyId || !slug) return;
-                  navigate(getMiniappBasePath(slug, nextCompanyId));
-                }}
-              >
-                {companies.length ? (
-                  companies.map(company => (
-                    <option key={company.id} value={company.id}>
-                      {company.title}
-                    </option>
-                  ))
-                ) : (
-                  <option>Москва</option>
-                )}
-              </select>
-            </form>
-            <p className="text-3xl font-medium">{title}</p>
-            <p className="text-black text-sm opacity-[32%] flex gap-1 items-center">
-              <LocationIcon /> {addressLabel}
-            </p>
+              </>
+            )}
           </div>
         </div>
         <div ref={buttonsBlockRef} className="pt-3 pb-6 grid grid-cols-2 gap-1">
@@ -174,7 +186,15 @@ export function AtlazerPage() {
         <div>
           <p className="text-xl font-medium pt-3">Записи</p>
           <div className="pt-4">
-            {latestRecord ? (
+            {isLoading ? (
+              <div className="rounded-ui-l bg-gray-100 flex gap-1 p-4">
+                <Skeleton className="h-16 w-16 rounded-ui-m" />
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-5 w-24 rounded-full" />
+                </div>
+              </div>
+            ) : latestRecord ? (
               <button
                 type="button"
                 onClick={() =>
@@ -213,40 +233,66 @@ export function AtlazerPage() {
         />
         <div className="mt-8">
           <p className="text-xl font-medium pt-3">Фотографии</p>
-          <div
-            ref={photosScrollRef}
-            className="pt-4 overflow-x-auto hide-scrollbar -mx-4 p-4 mt-4"
-            onScroll={updatePhotosScroll}
-          >
-            <div className="flex w-max gap-3 pr-4">
-              {(photos.length
-                ? photos
-                : [{id: 'placeholder', url: '/assets/atlazer-img.png'}]
-              ).map(photo => (
-                <img
-                  key={photo.id}
-                  src={photo.url}
-                  className="h-[200px] w-[200px] shrink-0 rounded-ui-l object-cover"
+          {isLoading ? (
+            <div className="pt-4 flex gap-3">
+              {Array.from({length: 3}).map((_, index) => (
+                <Skeleton
+                  key={`photo-skeleton-${index}`}
+                  className="h-[200px] w-[200px] rounded-ui-l"
                 />
               ))}
             </div>
-          </div>
-          <div className="flex justify-center">
-            {photosScroll.isVisible && (
-              <div className="h-1 w-10 bg-black/10 rounded-full">
-                <div
-                  className="h-full rounded-full bg-black"
-                  style={{
-                    width: `${photosScroll.thumbWidth}px`,
-                    transform: `translateX(${photosScroll.thumbLeft}px)`,
-                  }}
-                />
+          ) : (
+            <>
+              <div
+                ref={photosScrollRef}
+                className="pt-4 overflow-x-auto hide-scrollbar -mx-4 p-4 mt-4"
+                onScroll={updatePhotosScroll}
+              >
+                <div className="flex w-max gap-3 pr-4">
+                  {(photos.length
+                    ? photos
+                    : [{id: 'placeholder', url: '/assets/atlazer-img.png'}]
+                  ).map(photo => (
+                    <img
+                      key={photo.id}
+                      src={photo.url}
+                      className="h-[200px] w-[200px] shrink-0 rounded-ui-l object-cover"
+                    />
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
+              <div className="flex justify-center">
+                {photosScroll.isVisible && (
+                  <div className="h-1 w-10 bg-black/10 rounded-full">
+                    <div
+                      className="h-full rounded-full bg-black"
+                      style={{
+                        width: `${photosScroll.thumbWidth}px`,
+                        transform: `translateX(${photosScroll.thumbLeft}px)`,
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
           <div className="mt-8">
             <p className="text-xl font-medium pt-3 pb-4">Отзывы</p>
-            {reviews.length ? (
+            {isLoading ? (
+              <div className="flex flex-col gap-6">
+                {Array.from({length: 2}).map((_, index) => (
+                  <div key={`review-skeleton-${index}`} className="flex gap-3">
+                    <Skeleton className="w-11 h-11 rounded-full" />
+                    <div className="flex flex-col gap-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : reviews.length ? (
               reviews.map(review => (
                 <div key={review.id} className="mb-8">
                   <div className="flex gap-3">
