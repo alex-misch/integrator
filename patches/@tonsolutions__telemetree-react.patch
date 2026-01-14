@@ -1,0 +1,36 @@
+diff --git a/.vscode/settings.json b/.vscode/settings.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..7712c26f57ac95ce06c476b1643dffffeef1067b
+--- /dev/null
++++ b/.vscode/settings.json
+@@ -0,0 +1,4 @@
++{
++  "files.refactoring.autoSave": false,
++  "editor.formatOnSave": false
++}
+diff --git a/lib/index.cjs b/lib/index.cjs
+index dd0e015ca521a3ffaec39852f3733b720453a648..d80c5ad109bc8d710ea6baaa309a6ad7328fdd7b 100644
+--- a/lib/index.cjs
++++ b/lib/index.cjs
+@@ -10951,7 +10951,7 @@ class EventBuilder {
+   }
+   setupAutoCaptureListener() {
+     var _a3, _b2;
+-    if (((_a3 = this.config) == null ? void 0 : _a3.auto_capture) && (this.trackGroup == TrackGroups.MEDIUM || this.trackGroup == TrackGroups.HIGH)) {
++    if (false && ((_a3 = this.config) == null ? void 0 : _a3.auto_capture) && (this.trackGroup == TrackGroups.MEDIUM || this.trackGroup == TrackGroups.HIGH)) {
+       const trackTags = this.config.auto_capture_tags.map(
+         (tag) => tag.toUpperCase()
+       );
+diff --git a/lib/index.mjs b/lib/index.mjs
+index feda9017ac0b926ecfc3970480344e5d02d5a8c7..e80bcd1f4c68a30544777109c480818f2f2e5b1a 100644
+--- a/lib/index.mjs
++++ b/lib/index.mjs
+@@ -10949,7 +10949,7 @@ class EventBuilder {
+   }
+   setupAutoCaptureListener() {
+     var _a3, _b2;
+-    if (((_a3 = this.config) == null ? void 0 : _a3.auto_capture) && (this.trackGroup == TrackGroups.MEDIUM || this.trackGroup == TrackGroups.HIGH)) {
++    if (false && ((_a3 = this.config) == null ? void 0 : _a3.auto_capture) && (this.trackGroup == TrackGroups.MEDIUM || this.trackGroup == TrackGroups.HIGH)) {
+       const trackTags = this.config.auto_capture_tags.map(
+         (tag) => tag.toUpperCase()
+       );

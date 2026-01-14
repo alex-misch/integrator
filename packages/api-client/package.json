@@ -1,0 +1,22 @@
+{
+  "name": "@integrator/api-client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate": "NODE_TLS_REJECT_UNAUTHORIZED=0 orval generate"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "orval": "7.1.1",
+    "@types/qs": "^6.9.16"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.56.2",
+    "qs": "^6.13.0",
+    "react-toastify": "catalog:"
+  }
+}

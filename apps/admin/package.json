@@ -1,0 +1,53 @@
+{
+  "name": "@integrator/admin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "catalog:",
+    "@icons-pack/react-simple-icons": "^13.8.0",
+    "@integrator/api-client": "workspace:*",
+    "@radix-ui/react-checkbox": "catalog:",
+    "@radix-ui/react-dialog": "catalog:",
+    "@radix-ui/react-label": "catalog:",
+    "@radix-ui/react-popover": "catalog:",
+    "@radix-ui/react-progress": "^1.1.8",
+    "@radix-ui/react-scroll-area": "catalog:",
+    "@radix-ui/react-select": "catalog:",
+    "@radix-ui/react-separator": "catalog:",
+    "@radix-ui/react-slot": "catalog:",
+    "@radix-ui/react-tooltip": "catalog:",
+    "@radix-ui/react-use-controllable-state": "^1.2.2",
+    "class-variance-authority": "catalog:",
+    "@shikijs/transformers": "3.19.0",
+    "clsx": "catalog:",
+    "cmdk": "^1.1.1",
+    "date-fns": "catalog:",
+    "dayjs": "catalog:",
+    "jose": "catalog:",
+    "lucide-react": "catalog:",
+    "next": "catalog:",
+    "react-day-picker": "catalog:",
+    "react-hook-form": "catalog:",
+    "react-toastify": "catalog:",
+    "recharts": "catalog:",
+    "shiki": "^3.19.0",
+    "tailwind-merge": "catalog:",
+    "xlsx": "^0.18.5",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tailwindcss": "catalog:",
+    "tw-animate-css": "catalog:",
+    "typescript": "catalog:"
+  }
+}

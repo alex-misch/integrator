@@ -1,0 +1,186 @@
+name: 'Build & Deploy app'
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_api:
+        description: 'Deploy api'
+        type: boolean
+        default: true
+      deploy_miniapp:
+        description: 'Deploy miniapp'
+        type: boolean
+        default: false
+      deploy_admin:
+        description: 'Deploy admin cms'
+        type: boolean
+        default: false
+
+env:
+  API_URL: ''
+
+jobs:
+  deploy-api:
+    if: ${{ inputs.deploy_api }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Build API
+        env:
+          NODE_ENV: production
+          IMAGE_NAME: ${{ vars.AWS_ECR_HOST }}/integrator-api:prod
+        run: |
+          rm -rf build/api
+          docker build -t api . -f apps/api/Dockerfile --target=service
+
+          docker run -d --name api api
+          mkdir -p ./build/api
+          docker cp api:/app/ ./build/api
+          docker stop api
+          docker rm api
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        working-directory: build/api/app
+        run: |
+          tar -czf - . | ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/integrate.emomap.online/api && sudo tar -xzvf -"
+
+  migrate-api:
+    runs-on: ubuntu-latest
+    needs: deploy-api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Prepare node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm -F api... i --frozen-lockfile
+
+      - name: Deploy migrations
+        env:
+          DB_HOST: ${{ vars.DB_HOST }}
+          DB_PORT: ${{ vars.DB_PORT }}
+          DB_USER: ${{ vars.DB_USER }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+        run: pnpm -F api migration:run
+
+  reload-api:
+    runs-on: ubuntu-latest
+    needs:
+      - migrate-api
+      - deploy-api
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: |
+          set -eux
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo chmod -R 775 /var/www/integrate.emomap.online/api"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo systemctl restart nestjs"
+
+  deploy-miniapp:
+    if: ${{ inputs.deploy_miniapp }}
+    runs-on: ubuntu-latest
+    needs: deploy-api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Prepare node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm -F miniapp... i --frozen-lockfile
+
+      - name: Build miniapp
+        env:
+          VITE_API_URL: ${{ env.API_URL }}
+          NODE_ENV: production
+        run: |
+          pnpm -F miniapp build
+          mkdir -p ./build/miniapp
+          cp -r apps/miniapp/dist/* ./build/miniapp
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        working-directory: build/miniapp
+        run: |
+          tar -czf - . | ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/integrate.emomap.online/miniapp && sudo tar -xzvf -"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo chmod -R 775 /var/www/integrate.emomap.online/miniapp"
+
+  deploy-admin:
+    if: ${{ inputs.deploy_admin }}
+    runs-on: ubuntu-latest
+    needs: deploy-api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Build CMS
+        env:
+          NEXT_PUBLIC_API_URL: ${{ env.API_URL }}
+        run: |
+          docker build -t admin-app . -f apps/admin/Dockerfile --target=service
+
+          docker run -d --name admin-app admin-app
+          mkdir -p ./build/admin
+          docker cp admin-app:/app/ ./build/admin
+          docker stop admin-app
+          docker rm admin-app
+          ls -la ./build
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        working-directory: build/admin/app
+        run: |
+          tar -czf - . | ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/miniapp.emomap.online/admin && sudo tar -xzvf -"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo chmod -R 775 /var/www/miniapp.emomap.online/admin"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo systemctl restart nextjs"

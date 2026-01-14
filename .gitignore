@@ -1,0 +1,9 @@
+node_modules
+
+
+*.tsbuildinfo
+.env
+.turbo
+
+#  MISC
+.todo
