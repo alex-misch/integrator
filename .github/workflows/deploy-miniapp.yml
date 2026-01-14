@@ -1,0 +1,53 @@
+name: 'Build & Deploy app'
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  API_URL: ''
+
+jobs:
+  deploy-miniapp:
+    if: ${{ inputs.deploy_miniapp }}
+    runs-on: ubuntu-latest
+    # needs: deploy-api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Prepare node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm -F miniapp... i --frozen-lockfile
+
+      - name: Build miniapp
+        env:
+          VITE_API_URL: ${{ env.API_URL }}
+          NODE_ENV: production
+        run: |
+          pnpm -F miniapp build
+          mkdir -p ./build/miniapp
+          cp -r apps/miniapp/dist/* ./build/miniapp
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        working-directory: build/miniapp
+        run: |
+          tar -czf - . | ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/integrate.emomap.online/miniapp && sudo tar -xzvf -"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo chmod -R 775 /var/www/integrate.emomap.online/miniapp"
