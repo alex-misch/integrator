@@ -61,7 +61,7 @@ const Page: PageComponent = ({children, className, style, back = false}) => {
         )}
         style={{
           minHeight: 'calc(100dvh + 1px)',
-          paddingTop: isMobile ? '10rem' : '1rem',
+          // paddingTop: isMobile ? '10rem' : '1rem',
           ...style,
         }}
       >
@@ -88,15 +88,14 @@ Page.Title = ({children, className, ...props}) => {
 Page.Title.displayName = 'PageTitle';
 
 Page.Content = ({className, fit, ...props}) => {
-  const isMobile = useIsMobile();
+  // const isMobile = useIsMobile();
   return (
     <div
       {...props}
       className={clsx(
         'bg-white relative rounded-t-[32px] pb-32 min-h-full',
         !fit && 'px-4',
-        isMobile ? 'pt-24' : 'pt-5',
-
+        // isMobile ? 'pt-24' : 'pt-5',
         className,
       )}
     />
