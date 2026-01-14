@@ -10,7 +10,7 @@ env:
 
 jobs:
   deploy-miniapp:
-    if: ${{ inputs.deploy_miniapp }}
+    # if: ${{ inputs.deploy_miniapp }}
     runs-on: ubuntu-latest
     # needs: deploy-api
     steps:
