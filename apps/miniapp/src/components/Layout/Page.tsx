@@ -49,6 +49,8 @@ const Page: PageComponent = ({children, className, style, back = false}) => {
     backButton.hide();
   }, [back, navigate]);
 
+  const isMobile = useIsMobile();
+
   return (
     <>
       <div
@@ -58,6 +60,7 @@ const Page: PageComponent = ({children, className, style, back = false}) => {
         )}
         style={{
           minHeight: 'calc(100dvh + 1px)',
+          paddingTop: isMobile ? '4rem' : '1rem',
           ...style,
         }}
       >
