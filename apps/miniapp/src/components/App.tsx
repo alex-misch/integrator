@@ -69,7 +69,9 @@ export default React.memo(function App() {
           <br />
           {window.location.href}
           <br />
-          {error.message} {error.stack}
+          {error.message} {error.stack} <br />
+          start: {lp.initData?.startParam} <br />
+          cpid: {Number(companyId)}
         </div>
       )}
       {!isSuccess && <LoaderFullscreen />}
