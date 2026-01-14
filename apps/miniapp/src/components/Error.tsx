@@ -46,6 +46,8 @@ export const ErrorView = (props: {
       {!!error && 'message' in (error as Error) && (
         <p className="text-gray-300 mt-10">
           Ошибка 504 {(props.error as Error)?.message}
+          <br />
+          url: {window.location.href}
         </p>
       )}
     </div>
