@@ -38,18 +38,23 @@ export default React.memo(function App() {
 
   useEffect(() => {
     const queryStartParam = query.get('tgWebAppStartParam');
-    if (lp.initDataRaw && companyId)
-      verify({
-        data: {
-          initData: lp.initDataRaw,
-          startParam:
-            lp.startParam ||
-            lp.initData?.startParam ||
-            queryStartParam ||
-            undefined,
-          company_id: Number(companyId),
+    if (lp.initDataRaw && companyId) {
+      console.log('verify');
+      verify(
+        {
+          data: {
+            initData: lp.initDataRaw,
+            startParam:
+              lp.startParam ||
+              lp.initData?.startParam ||
+              queryStartParam ||
+              undefined,
+            company_id: Number(companyId),
+          },
         },
-      });
+        {onSuccess: () => console.log('success verify')},
+      );
+    }
   }, [companyId, lp.initDataRaw, lp.startParam, verify]);
 
   useLayoutEffect(() => {

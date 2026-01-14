@@ -4,7 +4,7 @@ export const getMiniappParamsFromPath = (pathname: string) => {
   const parts = pathname.split('/').filter(Boolean);
   return {
     slug: parts[0] || 'atlazer',
-    companyId: parts[1] || '',
+    companyId: parts[1] || '520803',
   };
 };
 

@@ -27,7 +27,7 @@ export interface Route {
 
 const routes: Route[] = [
   {
-    path: '/index',
+    path: '/',
     Component: IndexPage,
     title: 'Домашняя страница',
   },
@@ -110,13 +110,13 @@ export const router = createHashRouter(
         <Route
           key={route.path}
           {...route}
-          index={route.path === '/index'}
+          index={route.path === '/'}
           errorElement={<ErrorView />}
         />
       ))}
       {/* Любой непрописанный путь → редирект на стартовый */}
-      <Route key="404" path="/*" element={<Navigate to="/index" replace />} />
-      <Route key="404" path="/" element={<Navigate to="/index" replace />} />
+      <Route key="404" path="/*" element={<Navigate to="/" replace />} />
+      <Route key="404" path="/" element={<Navigate to="/" replace />} />
     </Route>,
   ),
 );
