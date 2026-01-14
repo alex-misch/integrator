@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {ApiProperty} from '@nestjs/swagger';
+import {IsNotEmpty, IsNumber, IsOptional, IsString} from 'class-validator';
 
 export class VerifyCustomerDto {
   @ApiProperty({
@@ -20,4 +20,12 @@ export class VerifyCustomerDto {
   @IsString()
   @IsOptional()
   startParam?: string;
+
+  @ApiProperty({
+    example: 1714663,
+    description: 'Miniapp integration company id',
+    required: true,
+  })
+  @IsNumber()
+  company_id: number;
 }

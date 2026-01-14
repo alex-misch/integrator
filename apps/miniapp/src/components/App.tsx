@@ -14,9 +14,12 @@ import {
 } from '@integrator/api-client/public';
 import '@/config';
 import {LoaderFullscreen} from './Layout/LoaderFullscreen';
+import {getMiniappParamsFromPath} from '@/lib/miniapp';
 
 export default React.memo(function App() {
   const query = new URLSearchParams(window.location.search);
+  const hashPath = window.location.hash.replace(/^#/, '');
+  const {companyId} = getMiniappParamsFromPath(hashPath);
 
   const lp = useLaunchParams();
 
@@ -35,7 +38,7 @@ export default React.memo(function App() {
 
   useEffect(() => {
     const queryStartParam = query.get('tgWebAppStartParam');
-    if (lp.initDataRaw)
+    if (lp.initDataRaw && companyId)
       verify({
         data: {
           initData: lp.initDataRaw,
@@ -44,9 +47,10 @@ export default React.memo(function App() {
             lp.initData?.startParam ||
             queryStartParam ||
             undefined,
+          company_id: Number(companyId),
         },
       });
-  }, [lp.initDataRaw, lp.startParam, verify]);
+  }, [companyId, lp.initDataRaw, lp.startParam, verify]);
 
   useLayoutEffect(() => {
     if (!import.meta.env.DEV) {

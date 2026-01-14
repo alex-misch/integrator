@@ -80,6 +80,7 @@ export class CustomerPublicController {
       const customer = await this.customerService.verify(
         payload.initData,
         payload.startParam,
+        payload.company_id,
       );
       if (!customer) {
         throw new UnauthorizedException('Fail to validate user');

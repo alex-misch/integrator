@@ -16,7 +16,7 @@ import {
   useManagersAdminControllerCreate,
   useManagersAdminControllerUpdate,
   UserResponse,
-} from '@outreach/api-client/admin';
+} from '@integrator/api-client/admin';
 import {Loader2} from 'lucide-react';
 import {toast} from 'react-toastify';
 import {Checkbox} from '@/components/ui/checkbox';

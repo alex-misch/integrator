@@ -11,7 +11,8 @@ import * as crypto from 'crypto';
 import {parse} from 'querystring';
 import {VerifyCustomerDto} from './dto/telegram-customer.dto';
 import {TelegramLogs} from './telegram-log.entity';
-import {getBotToken} from 'src/utils/tg';
+import {Miniapp} from '../miniapp/miniapp.entity';
+import {MiniappYclientsIntegration} from '../miniapp/miniapp-yclients.entity';
 
 @Injectable()
 export class TelegramCustomerService {
@@ -21,6 +22,9 @@ export class TelegramCustomerService {
 
     @InjectRepository(TelegramLogs)
     private log: Repository<TelegramLogs>,
+
+    @InjectRepository(MiniappYclientsIntegration)
+    private integrations: Repository<MiniappYclientsIntegration>,
   ) {}
 
   count(opts?: FindManyOptions<TelegramCustomer>) {
@@ -59,7 +63,11 @@ export class TelegramCustomerService {
     return crypto.createHmac('sha256', key).update(value).digest();
   }
 
-  async verify(initData: VerifyCustomerDto['initData'], startParam: string) {
+  async verify(
+    initData: VerifyCustomerDto['initData'],
+    startParam: string,
+    companyId: number,
+  ) {
     // Parse query data
     const parsedData = this.parseInitData(initData);
 
@@ -79,7 +87,8 @@ export class TelegramCustomerService {
     // result: 'auth_date=<auth_date>\nquery_id=<query_id>\nuser=<user>'
     const data_check_string = items.join('\n');
 
-    const secret_key = this.hmacSHA256(getBotToken(), 'WebAppData');
+    const botToken = await this.getBotTokenByCompanyId(companyId);
+    const secret_key = this.hmacSHA256(botToken, 'WebAppData');
 
     // Generate hash to validate
     const hashGenerate = this.hmacSHA256(
@@ -112,6 +121,18 @@ export class TelegramCustomerService {
       user,
       startParam || user.start_param,
     );
+  }
+
+  private async getBotTokenByCompanyId(companyId: number) {
+    const integration = await this.integrations.findOne({
+      where: {company_id: companyId},
+      relations: ['miniapp'],
+    });
+    const token = integration?.miniapp?.telegram_bot_token;
+    if (!token) {
+      throw new UnauthorizedException('Invalid bot token');
+    }
+    return token;
   }
 
   async createOrUpdate(
