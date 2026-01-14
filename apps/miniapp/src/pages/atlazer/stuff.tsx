@@ -52,9 +52,6 @@ export function AtlazerStuffPage() {
     const params = {
       ...bookingParams,
       specialist: specialistId,
-      service: undefined,
-      date: undefined,
-      time: undefined,
     };
     const nextRoute = getNextBookingRoute(params, basePath);
     navigate(buildBookingUrl(nextRoute, params));
