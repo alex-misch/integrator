@@ -102,7 +102,7 @@ jobs:
         run: |
           set -eux
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo chmod -R 775 /var/www/integrate.emomap.online/api"
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo systemctl restart nestjs"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo systemctl restart nestjs-integrator"
 
   deploy-miniapp:
     if: ${{ inputs.deploy_miniapp }}
@@ -183,4 +183,4 @@ jobs:
         run: |
           tar -czf - . | ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/integrate.emomap.online/admin && sudo tar -xzvf -"
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo chmod -R 775 /var/www/integrate.emomap.online/admin"
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo systemctl restart nextjs"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo systemctl restart nextjs-integrator"
