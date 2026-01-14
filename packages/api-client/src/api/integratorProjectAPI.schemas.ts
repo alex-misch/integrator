@@ -182,6 +182,8 @@ export interface MiniappPublicReviewDto {
 }
 
 export interface VerifyCustomerDto {
+  /** Miniapp integration company id */
+  company_id: number;
   /** The initData from telegram */
   initData: string;
   /** Uniq code of referal */
