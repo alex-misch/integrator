@@ -25,7 +25,7 @@ export async function middleware(req: NextRequest) {
       throw new Error('Fail to verify token version');
     }
     if (req.nextUrl.pathname.startsWith('/auth')) {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
+      return NextResponse.redirect(new URL('/admin/dashboard', req.url));
     }
   } catch (err: unknown) {
     if (err instanceof Error) {
@@ -33,7 +33,7 @@ export async function middleware(req: NextRequest) {
     }
     // Если токен валидный, редирект на /dashboard
     if (!req.nextUrl.pathname.startsWith('/auth')) {
-      return NextResponse.redirect(new URL('/auth/login', req.url));
+      return NextResponse.redirect(new URL('/admin/auth/login', req.url));
     }
   }
 }
