@@ -11,6 +11,7 @@ const workspaceRoot = path.resolve(
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  basePath: '/admin',
   outputFileTracingRoot: workspaceRoot,
   eslint: {
     ignoreDuringBuilds: true,
