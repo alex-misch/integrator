@@ -14,7 +14,7 @@ export const SpecialistPreview = (props: {
           className="h-24 w-24 rounded-ui-l object-cover"
         />
       ) : (
-        <div className="w-16 h-16 rounded-ui-m bg-gray-300 flex items-center justify-center">
+        <div className="w-24 h-24 rounded-ui-m bg-gray-300 flex items-center justify-center">
           <UserSearch className="text-gray-700 w-10 h-10" />
         </div>
       )}

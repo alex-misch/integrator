@@ -188,7 +188,9 @@ export function AtlazerPage() {
                 </div>
                 <div className="p-4 flex flex-col items-start justify-center gap-1">
                   <p className="font-medium">{recordServiceTitle}</p>
-                  <Badge variant="success">{recordTime || 'Активная'}</Badge>
+                  <Badge variant="success">
+                    {recordTime.split(':').slice(0, 2).join(':') || 'Активная'}
+                  </Badge>
                 </div>
               </button>
             ) : (

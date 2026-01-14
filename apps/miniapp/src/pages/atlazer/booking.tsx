@@ -5,6 +5,7 @@ import {Page} from '@/components/Layout/Page.tsx';
 import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
 import {FloatingLabelInput} from '@/components/ui/input';
+import {Skeleton} from '@/components/ui/skeleton';
 import {
   useMiniappsPublicControllerCreateRecord,
   useMiniappsPublicControllerServices,
@@ -59,20 +60,23 @@ export function AtlazerBookingPage() {
   const timeValue = bookingParams.time;
   const {slug, companyId} = useMiniappParams();
   const basePath = getMiniappBasePath(slug, companyId);
-  const {data: services = []} = useMiniappsPublicControllerServices(
-    slug,
-    companyId,
-    {
-      specialistId: specialistId && specialistId !== 'any' ? specialistId : '',
-    },
-    {query: {enabled: !!(slug && companyId)}},
-  );
-  const {data: apiSpecialists = []} = useMiniappsPublicControllerStaff(
-    slug,
-    companyId,
-    {serviceId: serviceId || ''},
-    {query: {enabled: !!(slug && companyId)}},
-  );
+  const {data: services = [], isLoading: isLoadingServices} =
+    useMiniappsPublicControllerServices(
+      slug,
+      companyId,
+      {
+        specialistId:
+          specialistId && specialistId !== 'any' ? specialistId : '',
+      },
+      {query: {enabled: !!(slug && companyId)}},
+    );
+  const {data: apiSpecialists = [], isLoading: isLoadingSpecialists} =
+    useMiniappsPublicControllerStaff(
+      slug,
+      companyId,
+      {serviceId: serviceId || ''},
+      {query: {enabled: !!(slug && companyId)}},
+    );
   const specialists = useMemo(
     () => [
       {
@@ -86,6 +90,7 @@ export function AtlazerBookingPage() {
     [apiSpecialists],
   );
   const createRecord = useMiniappsPublicControllerCreateRecord();
+  const isLoading = isLoadingServices || isLoadingSpecialists;
 
   useEffect(() => {
     const nextRoute = getNextBookingRoute(bookingParams, basePath);
@@ -161,63 +166,91 @@ export function AtlazerBookingPage() {
     <Page back>
       <Page.Content>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <SpecialistPreview
-            name={specialist?.name ?? 'Специалист'}
-            role={specialist?.role ?? ''}
-            photo={specialist?.photo_url ?? null}
-          />
-
-          <div className="mt-6 flex flex-col gap-1">
-            <button
-              type="button"
-              onClick={() => {
-                navigate(
-                  buildBookingUrl(`${basePath}/service`, {
-                    specialist: specialistId,
-                  }),
-                );
-              }}
-              className="w-full rounded-ui-l border bg-zinc-100 px-4 py-3 text-left flex items-center justify-between"
-            >
-              <span className="flex flex-col gap-1">
-                <span className="text-sm text-black/40">Услуга</span>
-                <span className="text-black font-medium">
-                  {service?.title || 'Услуга'}
-                </span>
-              </span>
-              <PenLine className="h-5 w-5 fill-black/40 text-black/40" />
-            </button>
-
-            <div className="w-full rounded-ui-l border bg-zinc-100 px-4 py-3 text-left">
-              <div className="text-sm text-black/40">Стоимость</div>
-              <div className="text-black font-medium">
-                {service?.price_text
-                  ? `${service?.price_text} · ${service?.duration_text}`
-                  : 'не указана'}
+          {isLoading ? (
+            <>
+              <div className="flex flex-col items-center gap-4">
+                <Skeleton className="h-24 w-24 rounded-ui-l" />
+                <div className="flex flex-col gap-2 items-center">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-28" />
+                </div>
               </div>
-            </div>
+              <div className="mt-6 flex flex-col gap-1">
+                <div className="w-full rounded-ui-l border bg-zinc-100 px-4 py-3">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="mt-2 h-4 w-40" />
+                </div>
+                <div className="w-full rounded-ui-l border bg-zinc-100 px-4 py-3">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="mt-2 h-4 w-32" />
+                </div>
+                <div className="w-full rounded-ui-l border bg-zinc-100 px-4 py-3">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="mt-2 h-4 w-36" />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <SpecialistPreview
+                name={specialist?.name ?? 'Специалист'}
+                role={specialist?.role ?? ''}
+                photo={specialist?.photo_url ?? null}
+              />
 
-            <button
-              type="button"
-              onClick={() => {
-                navigate(
-                  buildBookingUrl(`${basePath}/datetime`, {
-                    service: serviceId,
-                    specialist: specialistId,
-                  }),
-                );
-              }}
-              className="w-full rounded-ui-l border bg-zinc-100 px-4 py-3 text-left flex items-center justify-between"
-            >
-              <span className="flex flex-col gap-1">
-                <span className="text-sm text-black/40">Дата и время</span>
-                <span className="text-black font-medium">
-                  {dateTimeValue || 'Выберите дату'}
-                </span>
-              </span>
-              <PenLine className="h-5 w-5 fill-black/40 text-black/40" />
-            </button>
-          </div>
+              <div className="mt-6 flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate(
+                      buildBookingUrl(`${basePath}/service`, {
+                        specialist: specialistId,
+                      }),
+                    );
+                  }}
+                  className="w-full rounded-ui-l border bg-zinc-100 px-4 py-2.5 text-left flex items-center justify-between"
+                >
+                  <span className="flex flex-col">
+                    <span className="text-sm text-black/40">Услуга</span>
+                    <span className="text-black font-medium -mt-0.5">
+                      {service?.title || 'Услуга'}
+                    </span>
+                  </span>
+                  <PenLine className="h-5 w-5 fill-black/40 text-black/40" />
+                </button>
+
+                <div className="w-full rounded-ui-l border bg-zinc-100 px-4 py-2.5 text-left">
+                  <div className="text-sm text-black/40">Стоимость</div>
+                  <div className="text-black font-medium -mt-0.5">
+                    {service?.price_text
+                      ? `${service?.price_text} · ${service?.duration_text}`
+                      : 'не указана'}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate(
+                      buildBookingUrl(`${basePath}/datetime`, {
+                        service: serviceId,
+                        specialist: specialistId,
+                      }),
+                    );
+                  }}
+                  className="w-full rounded-ui-l border bg-zinc-100 px-4 py-2.5 text-left flex items-center justify-between"
+                >
+                  <span className="flex flex-col gap-1">
+                    <span className="text-sm text-black/40">Дата и время</span>
+                    <span className="text-black font-medium -mt-0.5">
+                      {dateTimeValue || 'Выберите дату'}
+                    </span>
+                  </span>
+                  <PenLine className="h-5 w-5 fill-black/40 text-black/40" />
+                </button>
+              </div>
+            </>
+          )}
 
           <div className="mt-8">
             <p className="text-base font-medium text-black mb-2">Ваши данные</p>

@@ -3,6 +3,7 @@ import {Check} from 'lucide-react';
 import {Page} from '@/components/Layout/Page.tsx';
 import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
+import {Skeleton} from '@/components/ui/skeleton';
 import {useNavigate, useSearchParams} from 'react-router-dom';
 import {useMiniappsPublicControllerServices} from '@integrator/api-client/public';
 import {getMiniappBasePath, useMiniappParams} from '@/lib/miniapp';
@@ -23,7 +24,7 @@ export function AtlazerServicePage() {
     bookingParams.specialist && bookingParams.specialist !== 'any'
       ? bookingParams.specialist
       : undefined;
-  const {data: services = []} = useMiniappsPublicControllerServices(
+  const {data: services = [], isLoading} = useMiniappsPublicControllerServices(
     slug,
     companyId,
     {specialistId: specialistFilter || ''},
@@ -59,7 +60,19 @@ export function AtlazerServicePage() {
       <Page.Content>
         <p className="text-2xl font-bold pt-3">Услуги</p>
         <div className="pt-4 flex flex-col gap-1">
-          {services.length ? (
+          {isLoading ? (
+            Array.from({length: 5}).map((_, index) => (
+              <div
+                key={`service-skeleton-${index}`}
+                className="w-full bg-gray-100 rounded-ui-l px-4 py-3 flex items-center justify-between"
+              >
+                <div className="flex flex-col items-start gap-2 w-full">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-28" />
+                </div>
+              </div>
+            ))
+          ) : services.length ? (
             services.map(service => {
               const serviceId = String(service.id);
               const isSelected = selectedService === serviceId;
@@ -74,7 +87,7 @@ export function AtlazerServicePage() {
                     isSelected ? 'border-black' : 'border-transparent'
                   }`}
                 >
-                  <span className="flex flex-col items-start gap-1">
+                  <span className="flex flex-col items-start gap-1 text-left">
                     <span className="text-black font-medium">
                       {service.title}
                     </span>

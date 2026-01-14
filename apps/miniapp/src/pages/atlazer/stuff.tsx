@@ -3,6 +3,7 @@ import {Check, UserSearch} from 'lucide-react';
 import {Page} from '@/components/Layout/Page.tsx';
 import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
+import {Skeleton} from '@/components/ui/skeleton';
 import {useNavigate, useSearchParams} from 'react-router-dom';
 import {useMiniappsPublicControllerStaff} from '@integrator/api-client/public';
 import {getMiniappBasePath, useMiniappParams} from '@/lib/miniapp';
@@ -20,12 +21,13 @@ export function AtlazerStuffPage() {
   const {slug, companyId} = useMiniappParams();
   const basePath = getMiniappBasePath(slug, companyId);
   const serviceFilter = bookingParams.service ?? undefined;
-  const {data: apiSpecialists = []} = useMiniappsPublicControllerStaff(
-    slug,
-    companyId,
-    {serviceId: serviceFilter || ''},
-    {query: {enabled: !!(slug && companyId)}},
-  );
+  const {data: apiSpecialists = [], isLoading} =
+    useMiniappsPublicControllerStaff(
+      slug,
+      companyId,
+      {serviceId: serviceFilter || ''},
+      {query: {enabled: !!(slug && companyId)}},
+    );
   const specialists = useMemo(
     () => [
       {
@@ -66,7 +68,22 @@ export function AtlazerStuffPage() {
       <Page.Content>
         <p className="text-2xl font-bold pt-3">Специалисты</p>
         <div className="pt-4 flex flex-col gap-1">
-          {specialists.length ? (
+          {isLoading ? (
+            Array.from({length: 5}).map((_, index) => (
+              <div
+                key={`specialist-skeleton-${index}`}
+                className="w-full bg-gray-100 rounded-ui-l px-1 h-[72px] py-1 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  <Skeleton className="w-16 h-16 rounded-ui-m" />
+                  <div className="flex flex-col items-start gap-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : specialists.length ? (
             specialists.map(specialist => {
               const specialistId = String(specialist.id);
               const isSelected = selectedSpecialist === specialistId;

@@ -3,6 +3,7 @@ import {useNavigate, useSearchParams} from 'react-router-dom';
 import {Page} from '@/components/Layout/Page.tsx';
 import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
+import {Skeleton} from '@/components/ui/skeleton';
 import {
   buildBookingUrl,
   getBookingParams,
@@ -102,7 +103,7 @@ export function AtlazerDateTimePage() {
 
   const selectedDateValue = selectedDate ? formatDateValue(selectedDate) : null;
 
-  const {data: slots = []} = useMiniappsPublicControllerRecords(
+  const {data: slots = [], isLoading} = useMiniappsPublicControllerRecords(
     slug,
     companyId,
     {
@@ -232,7 +233,24 @@ export function AtlazerDateTimePage() {
 
         <div className="mt-8">
           <div className="mt-3 flex flex-col gap-6">
-            {slots.length ? (
+            {isLoading ? (
+              Array.from({length: 3}).map((_, index) => (
+                <div
+                  key={`time-group-skeleton-${index}`}
+                  className="flex flex-col gap-2"
+                >
+                  <Skeleton className="h-4 w-24" />
+                  <div className="flex flex-wrap gap-1">
+                    {Array.from({length: 5}).map((__, timeIndex) => (
+                      <Skeleton
+                        key={`time-slot-skeleton-${index}-${timeIndex}`}
+                        className="h-8 w-14 rounded-full"
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : slots.length ? (
               timeGroups.map(group => (
                 <div key={group.title} className="flex flex-col gap-2">
                   <p className="font-medium text-black">{group.title}</p>
