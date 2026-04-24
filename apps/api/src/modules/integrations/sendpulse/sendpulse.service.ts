@@ -91,7 +91,6 @@ export class SendpulseService {
       where: {telegram_id: String(telegramId)},
     });
     const dbPhone = normalizePhone(dbClient?.phone ?? null);
-    console.log('dbPhone', dbPhone);
 
     if (dbPhone) {
       return dbPhone;

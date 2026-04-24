@@ -7,12 +7,14 @@ import {YclientsClient} from '../integrations/yclients/yclients.service';
 import {TelegramCustomerService} from '../telegram/telegram-customer.service';
 import {normalizePhone} from 'src/utils/phone';
 import type {YclientsClientListItem} from '../integrations/yclients/yclient.types';
+import {SendpulseService} from '../integrations/sendpulse/sendpulse.service';
 
 @Injectable()
 export class CustomerLoyaltyService {
   constructor(
     private readonly yclients: YclientsClient,
     private readonly customers: TelegramCustomerService,
+    private readonly sendpulse: SendpulseService,
   ) {}
 
   async getBalance(customerId: number, companyId: number) {
@@ -97,9 +99,16 @@ export class CustomerLoyaltyService {
       throw new NotFoundException('Customer not found');
     }
 
-    const phone = normalizePhone(customer.phone ?? null);
+    const phone = normalizePhone(
+      customer.phone ??
+        (await this.sendpulse.getPhoneByTelegramId(customer.id)),
+    );
     if (!phone) {
       throw new BadRequestException('Customer phone is required');
+    }
+
+    if (normalizePhone(customer.phone ?? null) !== phone) {
+      await this.customers.update(customer.id, {phone});
     }
 
     const company = await this.yclients.company(companyId);
