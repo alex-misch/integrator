@@ -29,7 +29,6 @@ import {MiniappService} from 'src/modules/miniapp/miniapp-service.entity';
 import {MiniappSpecialist} from 'src/modules/miniapp/miniapp-specialist.entity';
 import {MiniappBooking} from 'src/modules/miniapp/miniapp-booking.entity';
 import {MiniappSeance} from 'src/modules/miniapp/miniapp-seance.entity';
-import {MiniappModule} from 'src/modules/miniapp/miniapp.module';
 import {SendpulseClient} from 'src/modules/integrations/sendpulse/sendpulse-clients.entity';
 import {SendpulseLog} from 'src/modules/integrations/sendpulse/sendpulse-logs.entity';
 
@@ -80,7 +79,7 @@ import {SendpulseLog} from 'src/modules/integrations/sendpulse/sendpulse-logs.en
     SendpulsePublicModule,
     WalletPublicModule,
     TelegramCustomerModule,
-    MiniappModule,
+    SendpulsePublicModule,
   ],
 })
 export class AppModule {

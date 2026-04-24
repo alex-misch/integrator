@@ -9,7 +9,6 @@ import {MiniappBooking} from './miniapp-booking.entity';
 import {MiniappSeance} from './miniapp-seance.entity';
 import {MiniappService as MiniappDomainService} from './miniapp.service';
 import {ManagerModule} from '../manager/manager.module';
-import {JwtModule} from '@nestjs/jwt';
 
 @Module({
   imports: [
