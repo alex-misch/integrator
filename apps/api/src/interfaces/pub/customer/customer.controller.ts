@@ -49,6 +49,7 @@ export class CustomerPublicController {
       username: customer.username,
       photo_url: customer.photo_url,
       phone: customer.phone,
+      referral_code: customer.referral_code,
     };
   }
 

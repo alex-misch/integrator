@@ -2,18 +2,24 @@ import {Page} from '@/components/Layout/Page.tsx';
 import {Badge} from '@/components/ui/badge';
 import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
+import {Input} from '@/components/ui/input';
 import {Skeleton} from '@/components/ui/skeleton';
 import {LocationIcon, SelectArrowIcon} from '@/uikit/icons';
-import {ArrowUpRight, StarIcon} from 'lucide-react';
+import {ArrowUpRight, Share2, StarIcon} from 'lucide-react';
 import {PropsWithChildren, useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {OrgContacts} from '@/features/OrgContacts';
 import {cn} from '@/lib/utils';
 import {
+  useCustomerPublicControllerProfile,
   useMiniappsPublicControllerBySlug,
   useMiniappsPublicControllerBookings,
+  useWalletPublicControllerBalance,
+  useWalletPublicControllerSpend,
+  useWalletPublicControllerTopup,
 } from '@integrator/api-client/public';
 import {getMiniappBasePath, useMiniappParams} from '@/lib/miniapp';
+import {shareURL} from '@telegram-apps/sdk-react';
 
 export function AtlazerPage() {
   const buttonsBlockRef = useRef<HTMLDivElement | null>(null);
@@ -35,6 +41,7 @@ export function AtlazerPage() {
     useMiniappsPublicControllerBookings(slug, companyId, {
       query: {enabled: !!(slug && companyId)},
     });
+  const {data: profile} = useCustomerPublicControllerProfile();
   const primaryIntegration = miniapp?.integration ?? null;
   const companies = miniapp?.companies ?? [];
   const selectedCompany =
@@ -63,6 +70,24 @@ export function AtlazerPage() {
     return String(date.getDate());
   }, [recordDate]);
   const isLoading = isMiniappLoading || isBookingsLoading;
+  const referralLink = profile?.referral_code
+    ? `https://t.me/etlazer_bot?start=tg_${profile.referral_code}`
+    : null;
+
+  const shareReferralLink = async () => {
+    if (!referralLink) return;
+
+    if (shareURL) {
+      await shareURL(referralLink);
+      return;
+    }
+
+    window.open(
+      `https://t.me/share/url?url=${encodeURIComponent(referralLink)}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
+  };
 
   const updatePhotosScroll = () => {
     const container = photosScrollRef.current;
@@ -218,6 +243,29 @@ export function AtlazerPage() {
             )}
           </div>
         </div>
+        <WalletCard companyId={companyId} />
+        {referralLink && (
+          <div className="mt-8 rounded-ui-l bg-zinc-100 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xl font-medium">Пригласить друга</p>
+                <p className="mt-1 truncate text-sm text-black/40">
+                  {referralLink}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="primary"
+                rounded="full"
+                size="icon"
+                aria-label="Поделиться"
+                onClick={shareReferralLink}
+              >
+                <Share2 className="h-[18px] w-[18px]" />
+              </Button>
+            </div>
+          </div>
+        )}
         <OrgContacts
           title={title}
           address={primaryIntegration?.address_text}
@@ -329,11 +377,14 @@ export function AtlazerPage() {
               className="flex-1"
             >
               <a
-                href={
-                  primaryIntegration?.phone
-                    ? `tel:${primaryIntegration.phone.replace(/[\s-()]+/g, '')}`
-                    : undefined
-                }
+                href={`tel:${primaryIntegration?.phone?.replace(/[\s-()]+/g, '')}`}
+                onClick={() => {
+                  if (primaryIntegration?.phone) {
+                    window.open(
+                      `tel:${primaryIntegration.phone.replace(/[\s-()]+/g, '')}`,
+                    );
+                  }
+                }}
               >
                 Позвонить
               </a>
@@ -362,6 +413,122 @@ export function AtlazerPage() {
         </FixedActionBar>
       </Page.Content>
     </Page>
+  );
+}
+
+function WalletCard({companyId}: {companyId?: string}) {
+  const companyIdNumber = Number(companyId);
+  const isEnabled = Boolean(companyIdNumber) && !Number.isNaN(companyIdNumber);
+  const [amount, setAmount] = useState('100');
+
+  const {
+    data: wallet,
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = useWalletPublicControllerBalance(
+    {company_id: companyIdNumber},
+    {query: {enabled: isEnabled}},
+  );
+
+  const {mutate: topup, isPending: isTopupPending} =
+    useWalletPublicControllerTopup({
+      mutation: {
+        onSuccess: () => refetch(),
+      },
+    });
+
+  const {mutate: spend, isPending: isSpendPending} =
+    useWalletPublicControllerSpend({
+      mutation: {
+        onSuccess: () => refetch(),
+      },
+    });
+
+  const numericAmount = Number(amount);
+  const isAmountValid = Number.isFinite(numericAmount) && numericAmount > 0;
+  const isSubmitting = isTopupPending || isSpendPending;
+
+  return (
+    <div className="mt-8 rounded-ui-l bg-zinc-100 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xl font-medium">Баллы</p>
+          <p className="mt-1 text-sm text-black/40">
+            Тестовый кошелек лояльности
+          </p>
+        </div>
+        {(isLoading || isFetching) && (
+          <Skeleton className="h-8 w-24 rounded-full" />
+        )}
+      </div>
+
+      {!isLoading && (
+        <div className="mt-4">
+          <p className="text-4xl font-medium leading-none">
+            {wallet?.points ?? 0}
+          </p>
+          <p className="mt-2 text-sm text-black/40">
+            Баланс: {wallet?.balance ?? 0}
+          </p>
+        </div>
+      )}
+
+      {isError && (
+        <p className="mt-3 text-sm text-red-500">
+          Не удалось загрузить кошелек
+        </p>
+      )}
+
+      <div className="mt-4">
+        <Input
+          inputMode="decimal"
+          type="number"
+          min="0"
+          step="1"
+          value={amount}
+          onChange={event => setAmount(event.target.value)}
+          placeholder="Сумма"
+          className="h-12 bg-white pt-0 text-base"
+        />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Button
+          variant="primary"
+          rounded="ui"
+          disabled={!isEnabled || !isAmountValid || isSubmitting}
+          onClick={() =>
+            topup({
+              data: {
+                company_id: companyIdNumber,
+                amount: numericAmount,
+                title: 'Topup from miniapp',
+              },
+            })
+          }
+        >
+          Пополнить
+        </Button>
+        <Button
+          variant="secondary"
+          rounded="ui"
+          disabled={!isEnabled || !isAmountValid || isSubmitting}
+          onClick={() =>
+            spend({
+              data: {
+                company_id: companyIdNumber,
+                amount: numericAmount,
+                title: 'Spend from miniapp',
+              },
+            })
+          }
+        >
+          Списать
+        </Button>
+      </div>
+    </div>
   );
 }
 

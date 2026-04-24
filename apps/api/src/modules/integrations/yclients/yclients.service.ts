@@ -13,6 +13,13 @@ import type {
   MetaAccepted,
   IsoDate,
   BookStaffSeancesResponse,
+  LoyaltyCardsResponse,
+  LoyaltyCardResponse,
+  IssueLoyaltyCardRequest,
+  LoyaltyCardManualTransactionRequest,
+  LoyaltyCardTypesResponse,
+  ClientSearchResponse,
+  ClientResponse,
 } from './yclient.types';
 import {ConfigService} from '@nestjs/config';
 
@@ -280,6 +287,108 @@ export class YclientsClient {
     });
 
     return this.unwrap(r, 'recordsByClient').data;
+  }
+
+  // ------------------------------------------------------------
+  // LOYALTY (Карты лояльности)
+  // ------------------------------------------------------------
+
+  /** Список карт по телефону (/api/v1/loyalty/cards/{phone}/{group_id}/{company_id}) */
+  async loyaltyCards(params: {
+    phone: string | number;
+    groupId: number;
+    companyId: number;
+  }): Promise<LoyaltyCardsResponse['data']> {
+    const {phone, groupId, companyId} = params;
+
+    const r = await this.request<
+      LoyaltyCardsResponse['data'],
+      LoyaltyCardsResponse['meta']
+    >('GET', `/api/v1/loyalty/cards/${phone}/${groupId}/${companyId}`);
+
+    return this.unwrap(r, 'loyaltyCards').data;
+  }
+
+  /** Выдать карту (/api/v1/loyalty/cards/{company_id}) */
+  async issueLoyaltyCard(
+    companyId: number,
+    body: IssueLoyaltyCardRequest,
+  ): Promise<LoyaltyCardResponse['data']> {
+    const r = await this.request<
+      LoyaltyCardResponse['data'],
+      LoyaltyCardResponse['meta']
+    >('POST', `/api/v1/loyalty/cards/${companyId}`, {body});
+
+    return this.unwrap(r, 'issueLoyaltyCard').data;
+  }
+
+  /** Операция с балансом карты (/api/v1/company/{company_id}/loyalty/cards/{card_id}/manual_transaction) */
+  async loyaltyCardManualTransaction(
+    companyId: number,
+    cardId: number,
+    body: LoyaltyCardManualTransactionRequest,
+  ): Promise<LoyaltyCardResponse['data']> {
+    const r = await this.request<
+      LoyaltyCardResponse['data'],
+      LoyaltyCardResponse['meta']
+    >(
+      'POST',
+      `/api/v1/company/${companyId}/loyalty/cards/${cardId}/manual_transaction`,
+      {body},
+    );
+
+    return this.unwrap(r, 'loyaltyCardManualTransaction').data;
+  }
+
+  async loyaltyCardTypes(
+    companyId: number,
+  ): Promise<LoyaltyCardTypesResponse['data']> {
+    const r = await this.request<
+      LoyaltyCardTypesResponse['data'],
+      LoyaltyCardTypesResponse['meta']
+    >('GET', `/api/v1/loyalty/card_types/salon/${companyId}`);
+
+    return this.unwrap(r, 'loyaltyCardTypesForClient').data;
+  }
+
+  async clientById(
+    companyId: number,
+
+    clientId: number,
+  ): Promise<ClientResponse['data']> {
+    const r = await this.request<
+      ClientResponse['data'],
+      ClientResponse['meta']
+    >('GET', `/api/v1/client/${companyId}/${clientId}`);
+    return this.unwrap(r, 'clientById').data;
+  }
+
+  /** Поиск клиентов по телефону (/company/{location_id}/clients/search) */
+  async searchClientsByPhone(
+    companyId: number,
+    phone: string,
+  ): Promise<ClientSearchResponse['data']> {
+    const r = await this.request<
+      ClientSearchResponse['data'],
+      ClientSearchResponse['meta']
+    >('POST', `/api/v1/company/${companyId}/clients/search`, {
+      body: {
+        page: 1,
+        page_size: 10,
+        fields: ['id', 'name', 'surname', 'phone'],
+        operation: 'AND',
+        filters: [
+          {
+            type: 'quick_search',
+            state: {
+              value: phone,
+            },
+          },
+        ],
+      },
+    });
+
+    return this.unwrap(r, 'searchClientsByPhone').data;
   }
 
   // ------------------------------------------------------------

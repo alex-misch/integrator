@@ -4,6 +4,10 @@
  * integrator project API
  * OpenAPI spec version: 1.0
  */
+export type WalletPublicControllerBalanceParams = {
+  company_id: number;
+};
+
 export type MiniappsPublicControllerRecordsParams = {
   date?: string;
   serviceId?: string;
@@ -18,6 +22,22 @@ export type MiniappsPublicControllerStaffParams = {
 export type MiniappsPublicControllerServicesParams = {
   specialistId: string;
 };
+
+export interface WalletAmountDto {
+  amount: number;
+  company_id: number;
+  title?: string;
+}
+
+export interface WalletBalanceResponseDto {
+  balance: number;
+  card_id: number;
+  card_number: string;
+  company_id: number;
+  points: number;
+  /** @nullable */
+  yclients_client_id: number | null;
+}
 
 export interface MiniappCreateRecordDto {
   /** @nullable */
@@ -204,6 +224,8 @@ export interface CustomerProfileResponse {
   phone: string | null;
   /** @nullable */
   photo_url: string | null;
+  /** @nullable */
+  referral_code: string | null;
   /** @nullable */
   username: string | null;
 }

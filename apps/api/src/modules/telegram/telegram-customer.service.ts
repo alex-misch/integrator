@@ -11,8 +11,8 @@ import * as crypto from 'crypto';
 import {parse} from 'querystring';
 import {VerifyCustomerDto} from './dto/telegram-customer.dto';
 import {TelegramLogs} from './telegram-log.entity';
-import {Miniapp} from '../miniapp/miniapp.entity';
 import {MiniappYclientsIntegration} from '../miniapp/miniapp-yclients.entity';
+import {SendpulseService} from '../integrations/sendpulse/sendpulse.service';
 
 @Injectable()
 export class TelegramCustomerService {
@@ -25,6 +25,8 @@ export class TelegramCustomerService {
 
     @InjectRepository(MiniappYclientsIntegration)
     private integrations: Repository<MiniappYclientsIntegration>,
+
+    private readonly sendpulseService: SendpulseService,
   ) {}
 
   count(opts?: FindManyOptions<TelegramCustomer>) {
@@ -151,6 +153,8 @@ export class TelegramCustomerService {
       where: {id},
     });
 
+    const phone = dbCustomer?.phone || (await this.getPhoneFromSendpulse(id));
+
     const fields = {
       first_name: _fields.first_name,
       last_name: _fields.last_name,
@@ -158,7 +162,9 @@ export class TelegramCustomerService {
       language_code: _fields.language_code || 'en',
       photo_url: dbCustomer?.photo_url || _fields.photo_url,
       username: _fields.username || '',
+      phone: phone || null,
       start_param: start_param || null,
+      referral_code: dbCustomer?.referral_code || this.generateReferralCode(),
     };
 
     if (!dbCustomer) {
@@ -168,7 +174,29 @@ export class TelegramCustomerService {
         id,
       });
 
-      await this.customer.save(customer);
+      try {
+        await this.customer.save(customer);
+      } catch (error) {
+        for (let retry = 0; retry < 2; retry++) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+
+          const existingCustomer = await this.customer.findOne({where: {id}});
+          if (!existingCustomer) continue;
+
+          await this.customer.update(existingCustomer.id, {
+            ...fields,
+            start_param: existingCustomer.start_param || start_param,
+            referral_code:
+              existingCustomer.referral_code || fields.referral_code,
+          });
+
+          return await this.customer.findOne({
+            where: {id: existingCustomer.id},
+          });
+        }
+
+        throw error;
+      }
 
       return customer;
     } else {
@@ -181,5 +209,28 @@ export class TelegramCustomerService {
         where: {id: dbCustomer.id},
       });
     }
+  }
+
+  private async getPhoneFromSendpulse(
+    telegramId: number,
+  ): Promise<string | null> {
+    try {
+      const phone =
+        await this.sendpulseService.getPhoneByTelegramId(telegramId);
+      return phone;
+    } catch (error) {
+      console.error(
+        '[TelegramCustomerService] Failed to get phone from Sendpulse',
+        {
+          telegramId,
+          error,
+        },
+      );
+      return null;
+    }
+  }
+
+  private generateReferralCode() {
+    return crypto.randomBytes(8).toString('base64url');
   }
 }

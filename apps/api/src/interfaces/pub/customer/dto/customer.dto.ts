@@ -8,4 +8,5 @@ export class CustomerProfileResponse extends PickType(TelegramCustomer, [
   'username',
   'photo_url',
   'phone',
+  'referral_code',
 ]) {}

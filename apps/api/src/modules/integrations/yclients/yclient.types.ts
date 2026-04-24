@@ -9,6 +9,39 @@ export interface YclientsSuccessResponse<TData, TMeta = unknown> {
   data: TData;
   meta: TMeta;
 }
+export interface Client {
+  id: number;
+
+  name: string;
+
+  phone: string;
+
+  email: string;
+
+  sex: number;
+
+  birthday: string | null;
+
+  comment: string;
+
+  discount: number;
+
+  card: string | null;
+
+  created: string;
+
+  updated: string;
+
+  last_visit_date?: string;
+
+  visits_count?: number;
+
+  sold_amount?: number;
+
+  // в API есть ещё поля — можно расширить при необходимости
+}
+
+export type ClientResponse = YclientsSuccessResponse<Client, MetaEmptyObject>;
 
 export interface YclientsFailResponse<TMeta = unknown> {
   success: false;
@@ -265,4 +298,120 @@ export interface BookStaffSeancesData {
 export type BookStaffSeancesResponse = YclientsSuccessResponse<
   BookStaffSeancesData,
   MetaEmptyArray
+>;
+
+// --- LOYALTY CARDS ---
+export interface LoyaltyCardProgramRule {
+  id: number;
+  loyalty_program_id: number;
+  loyalty_type_id: number;
+  value: number;
+  parameter: number;
+}
+
+export interface LoyaltyTypeInfo {
+  id: number;
+  title: string;
+  is_discount: boolean;
+  is_cashback: boolean;
+  is_static: boolean;
+  is_accumulative: boolean;
+}
+
+export interface LoyaltyCardProgram {
+  id: number;
+  title: string;
+  value: number;
+  loyalty_type_id: number;
+  item_type_id: number;
+  value_unit_id: number;
+  group_id: number;
+  loyalty_type: LoyaltyTypeInfo;
+  rules: LoyaltyCardProgramRule[];
+}
+
+export interface LoyaltyCardTypeRef {
+  id: number;
+  title: string;
+  salon_group_id: number;
+}
+
+export interface LoyaltySalonGroupRef {
+  id: number;
+  title: string;
+}
+
+export interface LoyaltyCard {
+  id: number;
+  title: string;
+  number: number;
+  balance: number;
+  points: number;
+  type: LoyaltyCardTypesResponse['data'][number];
+}
+
+export type LoyaltyCardsResponse = YclientsSuccessResponse<
+  LoyaltyCard[],
+  MetaEmptyArray
+>;
+
+export type LoyaltyCardResponse = YclientsSuccessResponse<
+  LoyaltyCard,
+  MetaEmptyObject
+>;
+
+export interface IssueLoyaltyCardRequest {
+  loyalty_card_number: number;
+  loyalty_card_type_id: number;
+  phone: number;
+}
+
+export interface LoyaltyCardManualTransactionRequest {
+  amount: number;
+  title?: string;
+}
+
+export interface LoyaltyCardTypeRefResponse {
+  id: number;
+  title: string;
+  salon_group_id: number;
+  salon_group?: {
+    id: number;
+    title: string;
+  };
+}
+
+export type LoyaltyCardTypesResponse = YclientsSuccessResponse<
+  LoyaltyCardTypeRefResponse[],
+  MetaEmptyArray
+>;
+
+export interface ClientSearchFilter {
+  type: string;
+  state: Record<string, unknown>;
+}
+
+export interface ClientSearchRequest {
+  page?: number;
+  page_size?: number;
+  fields?: string[];
+  order_by?: string;
+  order_by_direction?: 'asc' | 'desc';
+  operation?: 'AND' | 'OR';
+  filters?: ClientSearchFilter[];
+}
+
+export interface YclientsClientListItem {
+  id: number;
+  name?: string;
+  surname?: string;
+  patronymic?: string;
+  phone?: string | number | null;
+  email?: string | null;
+  [k: string]: unknown;
+}
+
+export type ClientSearchResponse = YclientsSuccessResponse<
+  YclientsClientListItem[],
+  Record<string, unknown>
 >;

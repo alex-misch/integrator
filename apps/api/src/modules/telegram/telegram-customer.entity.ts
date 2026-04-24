@@ -68,6 +68,11 @@ export class TelegramCustomer {
 
   @ApiProperty({type: String, nullable: true})
   @Column({type: 'varchar', nullable: true})
+  @Index({unique: true})
+  referral_code: string | null;
+
+  @ApiProperty({type: String, nullable: true})
+  @Column({type: 'varchar', nullable: true})
   @Index()
   start_param: string;
 

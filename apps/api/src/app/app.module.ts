@@ -17,6 +17,8 @@ import {RateLimitEntity} from '../modules/rate-limit/rate-limit.entity';
 import {getPostgresCredentials} from '../utils/postgres';
 import {CustomerPublicModule} from 'src/interfaces/pub/customer/customer.module';
 import {MiniappsPublicModule} from 'src/interfaces/pub/miniapps/miniapps.module';
+import {SendpulsePublicModule} from 'src/interfaces/pub/sendpulse/sendpulse.module';
+import {WalletPublicModule} from 'src/interfaces/pub/wallet/wallet.module';
 import {TelegramCustomerModule} from 'src/modules/telegram/telegram-customer.module';
 import {TelegramCustomer} from 'src/modules/telegram/telegram-customer.entity';
 import {TelegramLogs} from 'src/modules/telegram/telegram-log.entity';
@@ -28,6 +30,8 @@ import {MiniappSpecialist} from 'src/modules/miniapp/miniapp-specialist.entity';
 import {MiniappBooking} from 'src/modules/miniapp/miniapp-booking.entity';
 import {MiniappSeance} from 'src/modules/miniapp/miniapp-seance.entity';
 import {MiniappModule} from 'src/modules/miniapp/miniapp.module';
+import {SendpulseClient} from 'src/modules/integrations/sendpulse/sendpulse-clients.entity';
+import {SendpulseLog} from 'src/modules/integrations/sendpulse/sendpulse-logs.entity';
 
 @Module({
   imports: [
@@ -52,6 +56,8 @@ import {MiniappModule} from 'src/modules/miniapp/miniapp.module';
         MiniappSpecialist,
         MiniappBooking,
         MiniappSeance,
+        SendpulseClient,
+        SendpulseLog,
       ],
       migrations: ['dist/migrations/*.js'],
       synchronize: false,
@@ -71,6 +77,8 @@ import {MiniappModule} from 'src/modules/miniapp/miniapp.module';
     MiniappsAdminModule,
     CustomerPublicModule,
     MiniappsPublicModule,
+    SendpulsePublicModule,
+    WalletPublicModule,
     TelegramCustomerModule,
     MiniappModule,
   ],

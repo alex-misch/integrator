@@ -55,7 +55,7 @@ Purpose: help an AI coding agent become productive quickly in this workspace.
 
 7. Small gotchas for an agent
 
-- When editing entities that affect the DB schema, update migrations. Run `migration:generate` then `migration:run` and validate seeds.
+- When editing entities that affect the DB schema, **never edit an existing migration file**. Update the TypeORM entity first, then generate a new migration with `pnpm -F api migration:generate src/migrations/<MigrationName>`, run it with `pnpm -F api migration:run`, and validate seeds if relevant. Existing migrations are append-only history and must remain unchanged unless the user explicitly asks to rewrite local migration history.
 - API client generation expects the backend to be running on the host/port the orval config targets. If you change server ports, update `orval.config.js` or generate with explicit URL.
 - Prefer small, focused edits. Follow existing NestJS DI patterns (providers, controllers, modules) instead of introducing non-idiomatic structure.
 - Avoid changing global monorepo scripts unless necessary — prefer per-package scripts with `pnpm -F`.
