@@ -37,6 +37,21 @@ jobs:
           tar -czf - . | ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/integrate.emomap.online/api && sudo tar -xzvf -"
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/integrate.emomap.online/api && /root/.local/share/pnpm/pnpm i --prod"
 
+      - name: Deploy migrations
+        env:
+          DB_HOST: ${{ vars.DB_HOST }}
+          DB_PORT: ${{ vars.DB_PORT }}
+          DB_USER: ${{ vars.DB_USER }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+        run: pnpm -F api migration:run
+
+      - name: Reload systemctl app
+        run: |
+          set -eux
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo chmod -R 775 /var/www/integrate.emomap.online/api"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo systemctl restart nestjs-integrator"
+
   deploy-miniapp:
     # if: ${{ inputs.deploy_miniapp }}
     runs-on: ubuntu-latest
