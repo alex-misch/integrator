@@ -30,31 +30,24 @@ jobs:
           fetch-depth: 1
 
       - name: Build API
-        env:
-          NODE_ENV: production
-          IMAGE_NAME: ${{ vars.AWS_ECR_HOST }}/integrator-api:prod
         run: |
-          rm -rf build/api
-          docker build -t api . -f apps/api/Dockerfile --target=service
-
-          docker run -d --name api api
-          mkdir -p ./build/api
-          docker cp api:/app/ ./build/api
-          docker stop api
-          docker rm api
+          corepack enable
+          pnpm -F @agents/nest-app... i --ignore-scripts
+          pnpm -F @agents/nest-app build
+          pnpm -F @agents/nest-app exec cp package.json dist
 
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy
-        working-directory: build/api/app
+        working-directory: apps/api/dist
         run: |
           tar -czf - . | ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/integrate.emomap.online/api && sudo tar -xzvf -"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/integrate.emomap.online/api && /root/.nvm/versions/node/v22.17.1/bin/node /root/.local/share/pnpm/pnpm i --prod"
 
   migrate-api:
     runs-on: ubuntu-latest

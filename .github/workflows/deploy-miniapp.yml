@@ -9,6 +9,34 @@ env:
   API_URL: ''
 
 jobs:
+  deploy-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Build API
+        run: |
+          corepack enable
+          pnpm -F api... i --ignore-scripts
+          pnpm -F api build
+          pnpm -F api exec cp package.json dist
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        working-directory: apps/api/dist
+        run: |
+          tar -czf - . | ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/integrate.emomap.online/api && sudo tar -xzvf -"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/integrate.emomap.online/api && /root/.local/share/pnpm/pnpm i --prod"
+
   deploy-miniapp:
     # if: ${{ inputs.deploy_miniapp }}
     runs-on: ubuntu-latest
