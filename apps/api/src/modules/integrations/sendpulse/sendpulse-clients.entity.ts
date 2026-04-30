@@ -24,8 +24,11 @@ export class SendpulseClient {
   id: string | null;
 
   @Index()
-  @Column({type: 'bigint', nullable: true})
+  @Column({type: 'varchar', nullable: true})
   tg_referrer: string | null;
+
+  @Column({type: 'int', default: 0})
+  pending_referral_points: number;
 
   @Column({type: 'varchar', nullable: true})
   phone: string | null;

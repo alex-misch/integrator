@@ -2,6 +2,7 @@ import {Injectable} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {Repository} from 'typeorm';
 import {normalizePhone} from 'src/utils/phone';
+import {TelegramCustomer} from 'src/modules/telegram/telegram-customer.entity';
 import {SendpulseClient} from './sendpulse-clients.entity';
 import {SendpulseLog} from './sendpulse-logs.entity';
 import {SendpulseApi, SendpulseUser} from './sendpulse.adaptor';
@@ -43,6 +44,7 @@ type SendpulseClientFields = {
 
 @Injectable()
 export class SendpulseService {
+  private readonly referralWelcomeBonusPoints = 3000;
   private sendpulseApi: SendpulseApi | null = null;
 
   constructor(
@@ -51,6 +53,9 @@ export class SendpulseService {
 
     @InjectRepository(SendpulseLog)
     private readonly sendpulseLog: Repository<SendpulseLog>,
+
+    @InjectRepository(TelegramCustomer)
+    private readonly telegramCustomers: Repository<TelegramCustomer>,
   ) {}
 
   async saveStartEvent(payload: unknown) {
@@ -121,8 +126,16 @@ export class SendpulseService {
 
     // /start without phone means first bot entry: no phone was collected for this tg id yet, so we treat the client as new.
     if (isNewClient && fields.tg_referrer) {
+      const isFirstReferralStart = !existingClient?.tg_referrer;
+
       nextFields.tg_referrer =
         existingClient?.tg_referrer ?? fields.tg_referrer;
+
+      // This is not a business condition. It keeps repeated /start webhooks from re-queueing the bonus after wallet resets it to 0.
+      if (isFirstReferralStart) {
+        nextFields.pending_referral_points =
+          await this.getReferralWelcomeBonusPoints(fields);
+      }
     }
 
     if (!existingClient) {
@@ -136,6 +149,36 @@ export class SendpulseService {
         where: {record_id: existingClient.record_id},
       })) ?? existingClient
     );
+  }
+
+  async applyPendingReferralPoints<T>(
+    telegramId: number | string,
+    apply: (points: number) => Promise<T>,
+  ): Promise<T | null> {
+    return this.sendpulseClient.manager.transaction(async manager => {
+      const repo = manager.getRepository(SendpulseClient);
+      const client = await repo
+        .createQueryBuilder('client')
+        .where('client.telegram_id = :telegramId', {
+          telegramId: String(telegramId),
+        })
+        .andWhere('client.pending_referral_points > 0')
+        .orderBy('client.date_created', 'ASC')
+        .setLock('pessimistic_write')
+        .getOne();
+
+      if (!client || client.pending_referral_points <= 0) {
+        return null;
+      }
+
+      const result = await apply(client.pending_referral_points);
+
+      await repo.update(client.record_id, {
+        pending_referral_points: 0,
+      });
+
+      return result;
+    });
   }
 
   private async findExistingClient(fields: SendpulseClientFields) {
@@ -194,9 +237,18 @@ export class SendpulseService {
   }
 
   private extractReferrer(contact: SendpulseWebhookContact) {
-    return this.extractTgReferrer(
+    const candidates = [
       contact.last_message_data?.message?.tracking_data?.start,
-    );
+      contact.last_message_data?.message?.tracking_data?.tg_referrer,
+      contact.variables?.tg_referrer,
+    ];
+
+    for (const candidate of candidates) {
+      const referrer = this.extractTgReferrer(candidate);
+      if (referrer) return referrer;
+    }
+
+    return null;
   }
 
   private unwrapEvents(payload: SendpulseWebhookPayload) {
@@ -232,8 +284,38 @@ export class SendpulseService {
 
   private extractTgReferrer(value: unknown) {
     const stringValue = this.toStringOrNull(value);
-    const referrer = stringValue?.match(/^tg_(\d+)$/i)?.[1];
+    if (!stringValue) return null;
 
-    return referrer ?? null;
+    const referrer = stringValue.match(/^tg_([a-z0-9_-]+)$/i)?.[1];
+    if (referrer) return referrer;
+
+    if (/^[a-z0-9_-]+$/i.test(stringValue)) {
+      return stringValue;
+    }
+
+    return null;
+  }
+
+  private async getReferralWelcomeBonusPoints(fields: SendpulseClientFields) {
+    if (!fields.tg_referrer) {
+      return 0;
+    }
+
+    const referrer = await this.findReferrerCustomer(fields.tg_referrer);
+    if (!referrer) {
+      return 0;
+    }
+
+    if (fields.telegram_id && String(referrer.id) === fields.telegram_id) {
+      return 0;
+    }
+
+    return this.referralWelcomeBonusPoints;
+  }
+
+  private async findReferrerCustomer(referrer: string) {
+    return this.telegramCustomers.findOne({
+      where: {referral_code: referrer, is_blocked: false},
+    });
   }
 }

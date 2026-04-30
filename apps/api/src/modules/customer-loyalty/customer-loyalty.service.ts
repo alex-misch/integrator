@@ -145,20 +145,50 @@ export class CustomerLoyaltyService {
       companyId,
     });
 
-    const cashbackCard = clientCards.find(card =>
+    let cashbackCard = clientCards.find(card =>
       card?.type.title?.includes('реферальной'),
     );
 
     if (cashbackCard) {
-      return {card: cashbackCard, yclientsClient};
+      const card = await this.applyPendingReferralBonus(
+        customer.id,
+        companyId,
+        cashbackCard,
+      );
+
+      return {card, yclientsClient};
     }
-    const issuedCard = await this.yclients.issueLoyaltyCard(companyId, {
+
+    cashbackCard = await this.yclients.issueLoyaltyCard(companyId, {
       loyalty_card_number: this.generateCardNumber(phone),
       loyalty_card_type_id: cardTypes[0].id,
       phone: Number(phone),
     });
 
-    return {card: issuedCard, yclientsClient};
+    const card = await this.applyPendingReferralBonus(
+      customer.id,
+      companyId,
+      cashbackCard,
+    );
+
+    return {card, yclientsClient};
+  }
+
+  private async applyPendingReferralBonus(
+    customerId: number,
+    companyId: number,
+    card: Awaited<ReturnType<YclientsClient['issueLoyaltyCard']>>,
+  ) {
+    const cardWithBonus = await this.sendpulse.applyPendingReferralPoints(
+      customerId,
+      points =>
+        this.yclients.loyaltyCardManualTransaction(companyId, card.id, {
+          amount: points,
+          title: 'Приветственный бонус по рефералке',
+        }),
+    );
+
+    return cardWithBonus ?? card;
   }
 
   private findYclientsClientByPhone(
