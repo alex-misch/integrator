@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
-import {Redo2, X} from 'lucide-react';
+import {X} from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -18,7 +18,7 @@ import {
   useMiniappsPublicControllerCancelBooking,
 } from '@integrator/api-client/public';
 import {getMiniappBasePath, useMiniappParams} from '@/lib/miniapp';
-import {buildBookingUrl, getBookingParams} from './booking-flow';
+import {getBookingParams} from './booking-flow';
 import {OrgContacts} from '@/features/OrgContacts';
 import {SpecialistPreview} from '@/features/SpecialistPreview';
 
