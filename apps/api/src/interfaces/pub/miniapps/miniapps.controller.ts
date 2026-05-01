@@ -49,8 +49,8 @@ const DEFAULT_BOOKING_SELECTION_BY_COMPANY_ID: Record<
   number,
   {serviceId: number; specialistId: number}
 > = {
-  122686: {serviceId: 1, specialistId: 37},
-  520803: {serviceId: 3, specialistId: 44},
+  122686: {serviceId: 27563427, specialistId: -1},
+  520803: {serviceId: 19782176, specialistId: -1},
 };
 
 @ApiTags('public-miniapps')
@@ -850,15 +850,15 @@ export class MiniappsPublicController {
     if (!serviceSelection) {
       throw new BadRequestException('service not found');
     }
-    if (specialistId && !specialistSelection) {
-      throw new BadRequestException('specialist not found');
-    }
+    // if (specialistId && !specialistSelection) {
+    //   throw new BadRequestException('specialist not found');
+    // }
 
     return {
       service: serviceSelection.service,
       specialist: specialistSelection?.specialist ?? null,
       serviceYclientsId: serviceSelection.yclientsId,
-      specialistYclientsId: specialistSelection?.yclientsId ?? null,
+      specialistYclientsId: specialistSelection?.yclientsId ?? -1,
     };
   }
 
