@@ -58,7 +58,6 @@ export function AtlazerBranchPage() {
     );
   };
 
-  // TODO: Bug когда мы редактируем запись, нужно сразу отправлять на выбор даты и времени без выбора филиала
   return (
     <Page back>
       <Page.Content>

@@ -155,7 +155,7 @@ export function AtlazerSuccessPage() {
                   className="flex-1"
                   onClick={() => {
                     navigate(
-                      buildBookingUrl(`${basePath}/branch`, {
+                      buildBookingUrl(`${basePath}/datetime`, {
                         id: bookingId ?? undefined,
                       }),
                     );
