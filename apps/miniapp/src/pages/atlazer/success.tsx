@@ -147,7 +147,7 @@ export function AtlazerSuccessPage() {
 
             <div className="mt-6 p-1">
               <div className="flex gap-1">
-                <Button
+                {/* <Button
                   type="button"
                   variant="muted"
                   rounded="full"
@@ -162,7 +162,7 @@ export function AtlazerSuccessPage() {
                   }}
                 >
                   Перенести
-                </Button>
+                </Button> */}
                 <Button
                   type="button"
                   variant="muted"
