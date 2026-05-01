@@ -15,7 +15,11 @@ import {
   useMiniappsPublicControllerBookings,
   useWalletPublicControllerBalance,
 } from '@integrator/api-client/public';
-import {getMiniappBasePath, useMiniappParams} from '@/lib/miniapp';
+import {
+  getMiniappBasePath,
+  setStoredMiniappCompanyId,
+  useMiniappParams,
+} from '@/lib/miniapp';
 import {shareURL} from '@telegram-apps/sdk-react';
 
 export function AtlazerPage() {
@@ -43,6 +47,11 @@ export function AtlazerPage() {
   const companies = miniapp?.companies ?? [];
   const selectedCompany =
     companies.find(item => String(item.id) === companyId) ?? companies[0];
+  const primaryCompanyId =
+    companies.find(company => company.is_primary)?.id ??
+    primaryIntegration?.company_id ??
+    selectedCompany?.id ??
+    companyId;
   const title =
     miniapp?.public_title || miniapp?.title || miniapp?.name || 'Miniapp';
   const cityLabel =
@@ -175,6 +184,7 @@ export function AtlazerPage() {
                     onChange={event => {
                       const nextCompanyId = event.target.value;
                       if (!nextCompanyId || !slug) return;
+                      setStoredMiniappCompanyId(slug, nextCompanyId);
                       navigate(getMiniappBasePath(slug, nextCompanyId));
                     }}
                   >
@@ -197,12 +207,9 @@ export function AtlazerPage() {
             )}
           </div>
         </div>
-        <div ref={buttonsBlockRef} className="pt-3 pb-6 grid grid-cols-2 gap-1">
-          <ButtonBox onClick={() => navigate(`${basePath}/service`)}>
-            Услуги
-          </ButtonBox>
-          <ButtonBox onClick={() => navigate(`${basePath}/stuff`)}>
-            Специалисты
+        <div ref={buttonsBlockRef} className="pt-3 pb-6">
+          <ButtonBox onClick={() => navigate(`${basePath}/branch`)}>
+            Записаться
           </ButtonBox>
         </div>
         <div>
@@ -240,7 +247,7 @@ export function AtlazerPage() {
             )}
           </div>
         </div>
-        <WalletCard companyId={companyId} />
+        <WalletCard companyId={primaryCompanyId} />
         {referralLink && (
           <button
             type="button"
@@ -425,7 +432,7 @@ export function AtlazerPage() {
                     ? 'opacity-100 scale-x-100 max-w-[240px]'
                     : 'opacity-0 scale-x-0 max-w-0'
                 }`}
-                onClick={() => navigate(`${basePath}/service`)}
+                onClick={() => navigate(`${basePath}/branch`)}
               >
                 Записаться
               </Button>
@@ -437,7 +444,7 @@ export function AtlazerPage() {
   );
 }
 
-function WalletCard({companyId}: {companyId?: string}) {
+function WalletCard({companyId}: {companyId?: number | string}) {
   const companyIdNumber = Number(companyId);
   const isEnabled = Boolean(companyIdNumber) && !Number.isNaN(companyIdNumber);
   const {
@@ -516,7 +523,7 @@ function formatCardNumber(value: string) {
 const ButtonBox = (props: PropsWithChildren<{onClick: VoidFunction}>) => {
   return (
     <button
-      className="p-4 rounded-ui-l bg-gray-100 h-32 flex flex-col justify-between items-start"
+      className="w-full flex-1 p-4 rounded-ui-l bg-gray-100 h-32 flex flex-col justify-between items-start"
       onClick={props.onClick}
     >
       <p className="font-medium text">{props.children}</p>

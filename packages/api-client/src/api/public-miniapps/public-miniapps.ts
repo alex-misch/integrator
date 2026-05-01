@@ -18,6 +18,7 @@ import type {
   UseQueryResult,
 } from '@tanstack/react-query';
 import type {
+  MiniappBookDatesDto,
   MiniappBooking,
   MiniappCreateRecordDto,
   MiniappPublicBookingDto,
@@ -25,6 +26,8 @@ import type {
   MiniappPublicServiceDto,
   MiniappPublicSpecialistDto,
   MiniappTimeslotDto,
+  MiniappUpdateBookingDto,
+  MiniappsPublicControllerBookDatesParams,
   MiniappsPublicControllerRecordsParams,
   MiniappsPublicControllerServicesParams,
   MiniappsPublicControllerStaffParams,
@@ -547,6 +550,180 @@ export function useMiniappsPublicControllerStaff<
 }
 
 /**
+ * @summary Miniapp available booking dates
+ */
+export const miniappsPublicControllerBookDates = (
+  slug: string,
+  companyId: string,
+  params?: MiniappsPublicControllerBookDatesParams,
+) => {
+  return customFetch<MiniappBookDatesDto>({
+    url: `/api/public/miniapps/${slug}/${companyId}/book-dates`,
+    method: 'GET',
+    params,
+  });
+};
+
+export const getMiniappsPublicControllerBookDatesQueryKey = (
+  slug: string,
+  companyId: string,
+  params?: MiniappsPublicControllerBookDatesParams,
+) => {
+  return [
+    `/api/public/miniapps/${slug}/${companyId}/book-dates`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getMiniappsPublicControllerBookDatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  params?: MiniappsPublicControllerBookDatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const {query: queryOptions} = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getMiniappsPublicControllerBookDatesQueryKey(slug, companyId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>
+  > = () => miniappsPublicControllerBookDates(slug, companyId, params);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(slug && companyId),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+    TError,
+    TData
+  > & {queryKey: QueryKey};
+};
+
+export type MiniappsPublicControllerBookDatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>
+>;
+export type MiniappsPublicControllerBookDatesQueryError = ErrorType<unknown>;
+
+export function useMiniappsPublicControllerBookDates<
+  TData = Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  params: undefined | MiniappsPublicControllerBookDatesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+          TError,
+          TData
+        >,
+        'initialData'
+      >;
+  },
+): DefinedUseQueryResult<TData, TError> & {queryKey: QueryKey};
+export function useMiniappsPublicControllerBookDates<
+  TData = Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  params?: MiniappsPublicControllerBookDatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+          TError,
+          TData
+        >,
+        'initialData'
+      >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey};
+export function useMiniappsPublicControllerBookDates<
+  TData = Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  params?: MiniappsPublicControllerBookDatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+        TError,
+        TData
+      >
+    >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey};
+/**
+ * @summary Miniapp available booking dates
+ */
+
+export function useMiniappsPublicControllerBookDates<
+  TData = Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  params?: MiniappsPublicControllerBookDatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof miniappsPublicControllerBookDates>>,
+        TError,
+        TData
+      >
+    >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey} {
+  const queryOptions = getMiniappsPublicControllerBookDatesQueryOptions(
+    slug,
+    companyId,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
  * @summary Miniapp records
  */
 export const miniappsPublicControllerRecords = (
@@ -961,6 +1138,115 @@ export const useMiniappsPublicControllerCreateRecord = <
   return useMutation(mutationOptions);
 };
 /**
+ * @summary Update miniapp booking
+ */
+export const miniappsPublicControllerUpdateBooking = (
+  slug: string,
+  companyId: string,
+  bookingId: string,
+  miniappUpdateBookingDto: MiniappUpdateBookingDto,
+) => {
+  return customFetch<MiniappPublicBookingDto>({
+    url: `/api/public/miniapps/${slug}/${companyId}/booking/${bookingId}`,
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    data: miniappUpdateBookingDto,
+  });
+};
+
+export const getMiniappsPublicControllerUpdateBookingMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof miniappsPublicControllerUpdateBooking>>,
+    TError,
+    {
+      slug: string;
+      companyId: string;
+      bookingId: string;
+      data: MiniappUpdateBookingDto;
+    },
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof miniappsPublicControllerUpdateBooking>>,
+  TError,
+  {
+    slug: string;
+    companyId: string;
+    bookingId: string;
+    data: MiniappUpdateBookingDto;
+  },
+  TContext
+> => {
+  const {mutation: mutationOptions} = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof miniappsPublicControllerUpdateBooking>>,
+    {
+      slug: string;
+      companyId: string;
+      bookingId: string;
+      data: MiniappUpdateBookingDto;
+    }
+  > = props => {
+    const {slug, companyId, bookingId, data} = props ?? {};
+
+    return miniappsPublicControllerUpdateBooking(
+      slug,
+      companyId,
+      bookingId,
+      data,
+    );
+  };
+
+  return {mutationFn, ...mutationOptions};
+};
+
+export type MiniappsPublicControllerUpdateBookingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof miniappsPublicControllerUpdateBooking>>
+>;
+export type MiniappsPublicControllerUpdateBookingMutationBody =
+  MiniappUpdateBookingDto;
+export type MiniappsPublicControllerUpdateBookingMutationError =
+  ErrorType<unknown>;
+
+/**
+ * @summary Update miniapp booking
+ */
+export const useMiniappsPublicControllerUpdateBooking = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof miniappsPublicControllerUpdateBooking>>,
+    TError,
+    {
+      slug: string;
+      companyId: string;
+      bookingId: string;
+      data: MiniappUpdateBookingDto;
+    },
+    TContext
+  >;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof miniappsPublicControllerUpdateBooking>>,
+  TError,
+  {
+    slug: string;
+    companyId: string;
+    bookingId: string;
+    data: MiniappUpdateBookingDto;
+  },
+  TContext
+> => {
+  const mutationOptions =
+    getMiniappsPublicControllerUpdateBookingMutationOptions(options);
+
+  return useMutation(mutationOptions);
+};
+/**
  * @summary Get miniapp booking
  */
 export const miniappsPublicControllerBookingById = (
@@ -1131,3 +1417,79 @@ export function useMiniappsPublicControllerBookingById<
 
   return query;
 }
+
+/**
+ * @summary Cancel miniapp booking
+ */
+export const miniappsPublicControllerCancelBooking = (
+  slug: string,
+  companyId: string,
+  bookingId: string,
+) => {
+  return customFetch<MiniappPublicBookingDto>({
+    url: `/api/public/miniapps/${slug}/${companyId}/booking/${bookingId}/cancel`,
+    method: 'POST',
+  });
+};
+
+export const getMiniappsPublicControllerCancelBookingMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof miniappsPublicControllerCancelBooking>>,
+    TError,
+    {slug: string; companyId: string; bookingId: string},
+    TContext
+  >;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof miniappsPublicControllerCancelBooking>>,
+  TError,
+  {slug: string; companyId: string; bookingId: string},
+  TContext
+> => {
+  const {mutation: mutationOptions} = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof miniappsPublicControllerCancelBooking>>,
+    {slug: string; companyId: string; bookingId: string}
+  > = props => {
+    const {slug, companyId, bookingId} = props ?? {};
+
+    return miniappsPublicControllerCancelBooking(slug, companyId, bookingId);
+  };
+
+  return {mutationFn, ...mutationOptions};
+};
+
+export type MiniappsPublicControllerCancelBookingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof miniappsPublicControllerCancelBooking>>
+>;
+
+export type MiniappsPublicControllerCancelBookingMutationError =
+  ErrorType<unknown>;
+
+/**
+ * @summary Cancel miniapp booking
+ */
+export const useMiniappsPublicControllerCancelBooking = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof miniappsPublicControllerCancelBooking>>,
+    TError,
+    {slug: string; companyId: string; bookingId: string},
+    TContext
+  >;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof miniappsPublicControllerCancelBooking>>,
+  TError,
+  {slug: string; companyId: string; bookingId: string},
+  TContext
+> => {
+  const mutationOptions =
+    getMiniappsPublicControllerCancelBookingMutationOptions(options);
+
+  return useMutation(mutationOptions);
+};

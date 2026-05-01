@@ -3,8 +3,10 @@ import type {
   BookServicesResponse,
   BookStaffResponse,
   BookTimesResponse,
+  BookDatesResponse,
   BookRecordResponse,
   BookRecordRequest,
+  DeleteUserRecordResponse,
   CompaniesResponse,
   CompanyResponse,
   RecordsResponse,
@@ -33,6 +35,7 @@ type QueryValue =
 type QueryParams = Record<string, QueryValue>;
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+type AuthMode = 'partner' | 'partner+user';
 
 @Injectable()
 export class YclientsClient {
@@ -64,10 +67,10 @@ export class YclientsClient {
     return url.toString();
   }
 
-  private headers(): HeadersInit {
+  private headers(auth: AuthMode = 'partner+user'): HeadersInit {
     const {partnerToken, userToken, accept} = this.options;
 
-    if (!userToken)
+    if (auth === 'partner+user' && !userToken)
       throw new Error(
         'Missing env: YCLIENTS_USER_TOKEN (required for this method)',
       );
@@ -75,7 +78,10 @@ export class YclientsClient {
     return {
       Accept: accept,
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${partnerToken}, User ${userToken}`,
+      Authorization:
+        auth === 'partner+user'
+          ? `Bearer ${partnerToken}, User ${userToken}`
+          : `Bearer ${partnerToken}`,
     };
   }
 
@@ -105,12 +111,13 @@ export class YclientsClient {
     opts?: {
       query?: QueryParams;
       body?: unknown;
+      auth?: AuthMode;
     },
   ): Promise<YclientsResponse<TData, TMeta>> {
     const url = this.buildUrl(path, opts?.query);
     const res = await fetch(url, {
       method,
-      headers: this.headers(),
+      headers: this.headers(opts?.auth),
       body: opts?.body ? JSON.stringify(opts.body) : undefined,
     });
 
@@ -230,6 +237,32 @@ export class YclientsClient {
     return json.data;
   }
 
+  async bookDates(
+    companyId: number,
+    query?: {
+      serviceIds?: number[];
+      staffId?: number;
+      date?: IsoDate;
+      dateFrom?: IsoDate;
+      dateTo?: IsoDate;
+    },
+  ): Promise<BookDatesResponse['data']> {
+    const r = await this.request<
+      BookDatesResponse['data'],
+      BookDatesResponse['meta']
+    >('GET', `/api/v1/book_dates/${companyId}`, {
+      query: {
+        'service_ids[]': query?.serviceIds,
+        staff_id: query?.staffId,
+        date: query?.date,
+        date_from: query?.dateFrom,
+        date_to: query?.dateTo,
+      },
+    });
+
+    return this.unwrap(r, 'bookDates').data;
+  }
+
   async bookStaffSeances(
     params: {companyId: number; staffId: number},
     query?: {serviceIds?: number[]},
@@ -258,8 +291,22 @@ export class YclientsClient {
     const r = await this.request<
       BookRecordResponse['data'],
       BookRecordResponse['meta']
-    >('POST', `/api/v1/book_record/${companyId}`, {body});
+    >('POST', `/api/v1/book_record/${companyId}`, {body, auth: 'partner'});
     return this.unwrap(r, 'bookRecord').data;
+  }
+
+  async deleteUserRecord(
+    recordId: number,
+    recordHash: string,
+  ): Promise<DeleteUserRecordResponse['data']> {
+    const r = await this.request<
+      DeleteUserRecordResponse['data'],
+      DeleteUserRecordResponse['meta']
+    >('DELETE', `/api/v1/user/records/${recordId}/${recordHash}`, {
+      auth: 'partner+user',
+    });
+
+    return this.unwrap(r, 'deleteUserRecord').data;
   }
 
   // ------------------------------------------------------------

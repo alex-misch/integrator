@@ -48,6 +48,17 @@ export class MiniappBooking {
   @ApiProperty({enum: MiniappBookingStatus})
   status: MiniappBookingStatus;
 
+  @Column({type: 'integer', nullable: true})
+  @ApiProperty({example: 2820023, nullable: true})
+  yclients_record_id: number | null;
+
+  @Column({type: 'varchar', length: 128, nullable: true})
+  @ApiProperty({
+    example: '567df655304da9b98487769426d4e76e',
+    nullable: true,
+  })
+  yclients_record_hash: string | null;
+
   @ManyToOne(() => MiniappService, {nullable: false})
   @JoinColumn({name: 'service_id'})
   service: MiniappService;

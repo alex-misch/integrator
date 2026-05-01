@@ -8,11 +8,11 @@ import {
   Route,
   useLocation,
   useNavigationType,
+  useParams,
 } from 'react-router-dom';
 import {ErrorView} from '@/components/Error';
 import {AtlazerPage} from '@/pages/atlazer';
-import {AtlazerServicePage} from '@/pages/atlazer/services';
-import {AtlazerStuffPage} from '@/pages/atlazer/stuff';
+import {AtlazerBranchPage} from '@/pages/atlazer/branch';
 import {AtlazerDateTimePage} from '@/pages/atlazer/datetime';
 import {AtlazerBookingPage} from '@/pages/atlazer/booking';
 import {AtlazerSuccessPage} from '@/pages/atlazer/success';
@@ -38,18 +38,23 @@ const routes: Route[] = [
   },
   {
     path: '/:slug/:companyId/service',
-    Component: AtlazerServicePage,
-    title: 'Услуги',
+    Component: RedirectToBranch,
+    title: 'Записаться',
   },
   {
     path: '/:slug/:companyId/services',
-    Component: AtlazerServicePage,
-    title: 'Услуги',
+    Component: RedirectToBranch,
+    title: 'Записаться',
   },
   {
     path: '/:slug/:companyId/stuff',
-    Component: AtlazerStuffPage,
-    title: 'Специалисты',
+    Component: RedirectToBranch,
+    title: 'Записаться',
+  },
+  {
+    path: '/:slug/:companyId/branch',
+    Component: AtlazerBranchPage,
+    title: 'Филиал',
   },
   {
     path: '/:slug/:companyId/datetime',
@@ -70,6 +75,11 @@ const routes: Route[] = [
 
 export const getRoutes = () => routes;
 const scrollRestorationRoutes = ['/index'];
+
+function RedirectToBranch() {
+  const {slug = 'atlazer', companyId = '520803'} = useParams();
+  return <Navigate to={`/${slug}/${companyId}/branch`} replace />;
+}
 
 export function ScrollRestoration() {
   const location = useLocation();

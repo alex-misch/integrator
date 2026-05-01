@@ -15,6 +15,12 @@ export type MiniappsPublicControllerRecordsParams = {
   mine?: string;
 };
 
+export type MiniappsPublicControllerBookDatesParams = {
+  date?: string;
+  dateFrom?: string;
+  dateTo?: string;
+};
+
 export type MiniappsPublicControllerStaffParams = {
   serviceId: string;
 };
@@ -33,6 +39,11 @@ export interface WalletBalanceResponseDto {
   yclients_client_id: number | null;
 }
 
+export interface MiniappUpdateBookingDto {
+  date: string;
+  time: string;
+}
+
 export interface MiniappCreateRecordDto {
   /** @nullable */
   client_email: string | null;
@@ -41,9 +52,9 @@ export interface MiniappCreateRecordDto {
   /** @nullable */
   comment: string | null;
   date: string;
-  service_id: number;
+  service_id?: number;
   /** @nullable */
-  specialist_id: number | null;
+  specialist_id?: number | null;
   time: string;
 }
 
@@ -58,10 +69,41 @@ export const MiniappPublicBookingDtoStatus = {
   completed: 'completed',
 } as const;
 
+/**
+ * @nullable
+ */
+export type MiniappPublicBookingDtoSpecialist =
+  MiniappPublicSpecialistDto | null;
+
+export interface MiniappPublicBookingDto {
+  date: string;
+  id: number;
+  service: MiniappPublicServiceDto;
+  /** @nullable */
+  specialist: MiniappPublicBookingDtoSpecialist;
+  status: MiniappPublicBookingDtoStatus;
+  time: string;
+}
+
 export interface MiniappTimeslotDto {
   datetime: string;
   seance_length: number;
   time: string;
+}
+
+export type MiniappBookDatesDtoWorkingDays = {[key: string]: string[]};
+
+export type MiniappBookDatesDtoWorkingDatesItem = string | number;
+
+export type MiniappBookDatesDtoBookingDays = {[key: string]: string[]};
+
+export type MiniappBookDatesDtoBookingDatesItem = string | number;
+
+export interface MiniappBookDatesDto {
+  booking_dates: MiniappBookDatesDtoBookingDatesItem[];
+  booking_days: MiniappBookDatesDtoBookingDays;
+  working_dates: MiniappBookDatesDtoWorkingDatesItem[];
+  working_days: MiniappBookDatesDtoWorkingDays;
 }
 
 export interface MiniappPublicSpecialistDto {
@@ -75,12 +117,6 @@ export interface MiniappPublicSpecialistDto {
   /** @nullable */
   yclients_id: number | null;
 }
-
-/**
- * @nullable
- */
-export type MiniappPublicBookingDtoSpecialist =
-  MiniappPublicSpecialistDto | null;
 
 export interface MiniappPublicServiceDto {
   /** @nullable */
@@ -102,16 +138,6 @@ export interface MiniappPublicServiceDto {
   weight: number | null;
   /** @nullable */
   yclients_id: number | null;
-}
-
-export interface MiniappPublicBookingDto {
-  date: string;
-  id: number;
-  service: MiniappPublicServiceDto;
-  /** @nullable */
-  specialist: MiniappPublicBookingDtoSpecialist;
-  status: MiniappPublicBookingDtoStatus;
-  time: string;
 }
 
 export interface MiniappPublicIntegrationDto {
@@ -151,6 +177,7 @@ export type MiniappPublicDtoIntegration = MiniappPublicIntegrationDto | null;
 
 export interface MiniappPublicCompanyDto {
   id: number;
+  is_primary: boolean;
   title: string;
 }
 
@@ -301,6 +328,10 @@ export interface MiniappBooking {
   id: number;
   status: MiniappBookingStatus;
   time: string;
+  /** @nullable */
+  yclients_record_hash: string | null;
+  /** @nullable */
+  yclients_record_id: number | null;
 }
 
 /**

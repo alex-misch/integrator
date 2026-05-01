@@ -616,16 +616,28 @@ export class MiniappService {
     });
   }
 
+  findServiceByYclientsId(integrationId: number, yclientsId: number) {
+    return this.servicesRepository.findOne({
+      where: {yclients_id: yclientsId, integration: {id: integrationId}},
+    });
+  }
+
   findSpecialist(integrationId: number, specialistId: number) {
     return this.specialistsRepository.findOne({
       where: {id: specialistId, integration: {id: integrationId}},
     });
   }
 
+  findSpecialistByYclientsId(integrationId: number, yclientsId: number) {
+    return this.specialistsRepository.findOne({
+      where: {yclients_id: yclientsId, integration: {id: integrationId}},
+    });
+  }
+
   findBookingById(miniappId: number, bookingId: number) {
     return this.bookingsRepository.findOne({
       where: {id: bookingId, miniapp: {id: miniappId}},
-      relations: ['service', 'service.integration', 'specialist'],
+      relations: ['customer', 'service', 'service.integration', 'specialist'],
     });
   }
 
@@ -642,6 +654,9 @@ export class MiniappService {
       .where('booking.miniapp_id = :miniappId', {miniappId})
       .andWhere('booking.customer_id = :customerId', {customerId})
       .andWhere('service.integration_id = :integrationId', {integrationId})
+      .andWhere('booking.status != :canceled', {
+        canceled: MiniappBookingStatus.Canceled,
+      })
       .orderBy('booking.date', 'DESC')
       .addOrderBy('booking.time', 'DESC')
       .getMany();
@@ -654,6 +669,9 @@ export class MiniappService {
     specialist?: MiniappSpecialistEntity | null;
     date: string;
     time: string;
+    status?: MiniappBookingStatus;
+    yclientsRecordId?: number | null;
+    yclientsRecordHash?: string | null;
   }) {
     const booking = this.bookingsRepository.create({
       miniapp: params.miniapp,
@@ -662,8 +680,36 @@ export class MiniappService {
       specialist: params.specialist ?? null,
       date: params.date,
       time: params.time,
-      status: MiniappBookingStatus.Pending,
+      status: params.status ?? MiniappBookingStatus.Pending,
+      yclients_record_id: params.yclientsRecordId ?? null,
+      yclients_record_hash: params.yclientsRecordHash ?? null,
     });
+    return this.bookingsRepository.save(booking);
+  }
+
+  async updateBooking(params: {
+    booking: MiniappBooking;
+    service: MiniappServiceEntity;
+    specialist?: MiniappSpecialistEntity | null;
+    date: string;
+    time: string;
+    status?: MiniappBookingStatus;
+    yclientsRecordId?: number | null;
+    yclientsRecordHash?: string | null;
+  }) {
+    params.booking.service = params.service;
+    params.booking.specialist = params.specialist ?? null;
+    params.booking.date = params.date;
+    params.booking.time = params.time;
+    params.booking.status = params.status ?? MiniappBookingStatus.Pending;
+    params.booking.yclients_record_id = params.yclientsRecordId ?? null;
+    params.booking.yclients_record_hash = params.yclientsRecordHash ?? null;
+
+    return this.bookingsRepository.save(params.booking);
+  }
+
+  async cancelBooking(booking: MiniappBooking) {
+    booking.status = MiniappBookingStatus.Canceled;
     return this.bookingsRepository.save(booking);
   }
 }

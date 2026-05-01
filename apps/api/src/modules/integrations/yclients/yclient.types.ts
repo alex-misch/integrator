@@ -133,27 +133,60 @@ export type BookTimesResponse = YclientsSuccessResponse<
   MetaEmptyArray
 >;
 
-// /api/v1/book_record/{company_id}
-export interface BookRecordRequest {
-  staff_id?: number;
-  services: Array<{id: number}>;
-  datetime: string;
-  fullname: string;
-  phone: string;
-  email?: string;
-  comment?: string;
+// /api/v1/book_dates/{company_id}
+export type DaysByMonth = Record<string, string[]>;
+
+export interface BookDatesData {
+  booking_days: DaysByMonth;
+  booking_dates: Array<number | string>;
+  working_days: DaysByMonth;
+  working_dates: Array<number | string>;
 }
 
-export interface BookRecordResponseData {
-  id?: number;
-  record_id?: number;
-  client_id?: number;
-  client?: {id: number};
+export type BookDatesResponse = YclientsSuccessResponse<
+  BookDatesData,
+  MetaEmptyArray
+>;
+
+// /api/v1/book_record/{company_id}
+export interface CreateBookRecordAppointment {
+  id: number;
+  services: number[];
+  staff_id: number;
+  datetime: string;
+  custom_fields?: Record<string, unknown>;
+}
+
+export interface BookRecordRequest {
+  phone: string;
+  fullname: string;
+  email: string;
+  code?: string;
+  comment?: string;
+  type?: string;
+  notify_by_sms?: number;
+  notify_by_email?: number;
+  api_id?: string | number;
+  custom_fields?: Record<string, unknown>;
+  appointments: CreateBookRecordAppointment[];
+  is_newsletter_allowed?: boolean;
+  is_personal_data_processing_allowed?: boolean;
+}
+
+export interface BookRecordResponseItem {
+  id: number;
+  record_id: number;
+  record_hash: string;
 }
 
 export type BookRecordResponse = YclientsSuccessResponse<
-  BookRecordResponseData,
-  MetaEmptyObject
+  BookRecordResponseItem[],
+  MetaEmptyArray
+>;
+
+export type DeleteUserRecordResponse = YclientsSuccessResponse<
+  unknown,
+  MetaEmptyArray | MetaEmptyObject
 >;
 
 // --- COMPANIES ---

@@ -33,6 +33,9 @@ export class MiniappPublicCompanyDto {
 
   @ApiProperty({example: 'Москва, Летниковская улица, 10с2'})
   title: string;
+
+  @ApiProperty({example: true})
+  is_primary: boolean;
 }
 
 export class MiniappPublicReviewDto extends PickType(MiniappReview, [

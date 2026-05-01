@@ -1,4 +1,5 @@
 import {Page} from '@/components/Layout/Page.tsx';
+import {getStoredMiniappCompanyId} from '@/lib/miniapp';
 import {useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
 
@@ -8,7 +9,9 @@ export function IndexPage() {
 
   useEffect(() => {
     console.log('render');
-    navigate('/atlazer/122686', {replace: true});
+    navigate(`/atlazer/${getStoredMiniappCompanyId('atlazer') ?? '122686'}`, {
+      replace: true,
+    });
   }, [navigate]);
 
   return (

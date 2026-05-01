@@ -13,13 +13,15 @@ import {
 import {MiniappBookingStatus} from '../../../../modules/miniapp/miniapp-booking.entity';
 
 export class MiniappCreateRecordDto {
-  @ApiProperty({example: 1})
+  @ApiPropertyOptional({example: 1})
+  @IsOptional()
   @IsNumber()
-  service_id: number;
+  service_id?: number;
 
-  @ApiProperty({example: 2, nullable: true})
+  @ApiPropertyOptional({example: 2, nullable: true})
+  @IsOptional()
   @IsNumber()
-  specialist_id: number | null;
+  specialist_id?: number | null;
 
   @ApiProperty({example: '2024-02-01'})
   @IsString()
@@ -66,6 +68,63 @@ export class MiniappRecordsQueryDto {
   @IsOptional()
   @IsIn(['1', 'true'])
   mine?: string;
+}
+
+export class MiniappBookDatesQueryDto {
+  @ApiPropertyOptional({example: '2024-02-01'})
+  @IsOptional()
+  @IsString()
+  date?: string;
+
+  @ApiPropertyOptional({example: '2024-02-01'})
+  @IsOptional()
+  @IsString()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({example: '2024-02-28'})
+  @IsOptional()
+  @IsString()
+  dateTo?: string;
+}
+
+export class MiniappBookDatesDto {
+  @ApiProperty({
+    example: {'2026-02': ['2026-02-01', '2026-02-02']},
+    type: 'object',
+    additionalProperties: {type: 'array', items: {type: 'string'}},
+  })
+  booking_days: Record<string, string[]>;
+
+  @ApiProperty({
+    example: ['2026-05-02'],
+    type: 'array',
+    items: {oneOf: [{type: 'string'}, {type: 'number'}]},
+  })
+  booking_dates: Array<number | string>;
+
+  @ApiProperty({
+    example: {'2026-02': ['2026-02-01', '2026-02-02']},
+    type: 'object',
+    additionalProperties: {type: 'array', items: {type: 'string'}},
+  })
+  working_days: Record<string, string[]>;
+
+  @ApiProperty({
+    example: ['2026-05-02'],
+    type: 'array',
+    items: {oneOf: [{type: 'string'}, {type: 'number'}]},
+  })
+  working_dates: Array<number | string>;
+}
+
+export class MiniappUpdateBookingDto {
+  @ApiProperty({example: '2024-02-01'})
+  @IsString()
+  date: string;
+
+  @ApiProperty({example: '12:00'})
+  @IsString()
+  time: string;
 }
 
 export class MiniappPublicBookingDto {

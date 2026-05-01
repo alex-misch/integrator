@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
 import {Redo2, X} from 'lucide-react';
 import {
@@ -15,8 +15,7 @@ import {Skeleton} from '@/components/ui/skeleton';
 import {
   useMiniappsPublicControllerBySlug,
   useMiniappsPublicControllerBookingById,
-  useMiniappsPublicControllerServices,
-  useMiniappsPublicControllerStaff,
+  useMiniappsPublicControllerCancelBooking,
 } from '@integrator/api-client/public';
 import {getMiniappBasePath, useMiniappParams} from '@/lib/miniapp';
 import {buildBookingUrl, getBookingParams} from './booking-flow';
@@ -50,8 +49,6 @@ export function AtlazerSuccessPage() {
   const [searchParams] = useSearchParams();
   const bookingParams = getBookingParams(searchParams);
   const bookingId = searchParams.get('id');
-  const serviceId = bookingParams.service;
-  const specialistId = bookingParams.specialist;
   const dateValue = bookingParams.date;
   const timeValue = bookingParams.time;
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -67,63 +64,14 @@ export function AtlazerSuccessPage() {
   } = useMiniappsPublicControllerBookingById(slug, companyId, bookingId ?? '', {
     query: {enabled: !!(slug && companyId && bookingId)},
   });
+  const cancelBooking = useMiniappsPublicControllerCancelBooking();
 
   useEffect(() => {
     if (isBookingNotFound) navigate(getMiniappBasePath(slug, companyId));
   }, [isBookingNotFound]);
 
-  const {data: services = [], isLoading: isLoadingServices} =
-    useMiniappsPublicControllerServices(
-      slug,
-      companyId,
-      {
-        specialistId:
-          specialistId && specialistId !== 'any' ? specialistId : '',
-      },
-      {query: {enabled: !!(slug && companyId)}},
-    );
-
-  const {data: apiSpecialists = [], isLoading: isLoadingSpecialists} =
-    useMiniappsPublicControllerStaff(
-      slug,
-      companyId,
-      {serviceId: serviceId || ''},
-      {query: {enabled: !!(slug && companyId)}},
-    );
-  const specialists = useMemo(
-    () => [
-      {
-        id: 'any',
-        name: 'Любой мастер',
-        role: 'Подберем мастера',
-        photo_url: null,
-      },
-      ...apiSpecialists,
-    ],
-    [apiSpecialists],
-  );
-
-  // useEffect(() => {
-  //   const nextRoute = getNextBookingRoute(bookingParams, basePath);
-  //   if (nextRoute !== `${basePath}/booking`) {
-  //     navigate(buildBookingUrl(nextRoute, bookingParams), {replace: true});
-  //   }
-  // }, [basePath, bookingParams, navigate]);
-
-  const service = useMemo(() => {
-    if (booking?.service) return booking.service;
-    return (
-      services.find(item => String(item.id) === serviceId) ??
-      (services.length ? services[0] : null)
-    );
-  }, [booking?.service, serviceId, services]);
-  const specialist = useMemo(() => {
-    if (booking?.specialist) return booking.specialist;
-    return (
-      specialists.find(item => String(item.id) === specialistId) ??
-      (specialists.length ? specialists[0] : null)
-    );
-  }, [booking?.specialist, specialistId, specialists]);
+  const service = booking?.service ?? null;
+  const specialist = booking?.specialist ?? null;
 
   const bookingDate = booking?.date ?? dateValue;
   const bookingTime = booking?.time ?? timeValue;
@@ -133,8 +81,7 @@ export function AtlazerSuccessPage() {
   const primaryIntegration = miniapp?.integration ?? null;
   const title =
     miniapp?.public_title || miniapp?.title || miniapp?.name || 'Miniapp';
-  const isLoading =
-    isBookingLoading || isLoadingServices || isLoadingSpecialists;
+  const isLoading = isBookingLoading;
 
   return (
     <Page back>
@@ -208,9 +155,8 @@ export function AtlazerSuccessPage() {
                   className="flex-1"
                   onClick={() => {
                     navigate(
-                      buildBookingUrl(`${basePath}/datetime`, {
-                        service: serviceId,
-                        specialist: specialistId,
+                      buildBookingUrl(`${basePath}/branch`, {
+                        id: bookingId ?? undefined,
                       }),
                     );
                   }}
@@ -281,6 +227,17 @@ export function AtlazerSuccessPage() {
               className="w-1/2"
               size="lg"
               rounded="full"
+              disabled={!bookingId || cancelBooking.isPending}
+              onClick={async () => {
+                if (!bookingId) return;
+                await cancelBooking.mutateAsync({
+                  slug,
+                  companyId,
+                  bookingId,
+                });
+                setCancelOpen(false);
+                navigate(basePath);
+              }}
             >
               Отменить запись
             </Button>

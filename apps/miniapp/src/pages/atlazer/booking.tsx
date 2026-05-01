@@ -1,16 +1,11 @@
-import {useEffect, useMemo} from 'react';
+import {useEffect} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
 import {PenLine} from 'lucide-react';
 import {Page} from '@/components/Layout/Page.tsx';
 import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
 import {FloatingLabelInput} from '@/components/ui/input';
-import {Skeleton} from '@/components/ui/skeleton';
-import {
-  useMiniappsPublicControllerCreateRecord,
-  useMiniappsPublicControllerServices,
-  useMiniappsPublicControllerStaff,
-} from '@integrator/api-client/public';
+import {useMiniappsPublicControllerCreateRecord} from '@integrator/api-client/public';
 import {getMiniappBasePath, useMiniappParams} from '@/lib/miniapp';
 import {
   buildBookingUrl,
@@ -19,7 +14,6 @@ import {
 } from './booking-flow';
 import {Checkbox} from '@/components/ui/checkbox';
 import {Controller, useForm} from 'react-hook-form';
-import {SpecialistPreview} from '@/features/SpecialistPreview';
 
 type BookingFormValues = {
   name: string;
@@ -54,43 +48,11 @@ export function AtlazerBookingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const bookingParams = getBookingParams(searchParams);
-  const serviceId = bookingParams.service || '';
-  const specialistId = bookingParams.specialist || '';
   const dateValue = bookingParams.date;
   const timeValue = bookingParams.time;
   const {slug, companyId} = useMiniappParams();
   const basePath = getMiniappBasePath(slug, companyId);
-  const {data: services = [], isLoading: isLoadingServices} =
-    useMiniappsPublicControllerServices(
-      slug,
-      companyId,
-      {
-        specialistId:
-          specialistId && specialistId !== 'any' ? specialistId : '',
-      },
-      {query: {enabled: !!(slug && companyId)}},
-    );
-  const {data: apiSpecialists = [], isLoading: isLoadingSpecialists} =
-    useMiniappsPublicControllerStaff(
-      slug,
-      companyId,
-      {serviceId: serviceId || ''},
-      {query: {enabled: !!(slug && companyId)}},
-    );
-  const specialists = useMemo(
-    () => [
-      {
-        id: 'any',
-        name: 'Любой мастер',
-        role: 'Подберем мастера',
-        photo_url: null,
-      },
-      ...apiSpecialists,
-    ],
-    [apiSpecialists],
-  );
   const createRecord = useMiniappsPublicControllerCreateRecord();
-  const isLoading = isLoadingServices || isLoadingSpecialists;
 
   useEffect(() => {
     const nextRoute = getNextBookingRoute(bookingParams, basePath);
@@ -98,19 +60,6 @@ export function AtlazerBookingPage() {
       navigate(buildBookingUrl(nextRoute, bookingParams), {replace: true});
     }
   }, [basePath, bookingParams, navigate]);
-
-  const service = useMemo(
-    () =>
-      services.find(item => String(item.id) === serviceId) ??
-      (services.length ? services[0] : null),
-    [serviceId, services],
-  );
-  const specialist = useMemo(
-    () =>
-      specialists.find(item => String(item.id) === specialistId) ??
-      (specialists.length ? specialists[0] : null),
-    [specialistId, specialists],
-  );
 
   const dateLabel = formatDateLabel(dateValue);
   const dateTimeValue =
@@ -131,23 +80,13 @@ export function AtlazerBookingPage() {
   });
 
   const onSubmit = async (values: BookingFormValues) => {
-    if (
-      !slug ||
-      !companyId ||
-      !serviceId ||
-      !dateValue ||
-      !timeValue ||
-      !service
-    ) {
+    if (!slug || !companyId || !dateValue || !timeValue) {
       return;
     }
     const booking = await createRecord.mutateAsync({
       slug,
       companyId,
       data: {
-        service_id: Number(serviceId),
-        specialist_id:
-          specialistId && specialistId !== 'any' ? Number(specialistId) : null,
         date: dateValue,
         time: timeValue,
         client_name: values.name,
@@ -156,7 +95,10 @@ export function AtlazerBookingPage() {
         comment: '',
       },
     });
-    const baseUrl = buildBookingUrl(`${basePath}/success`, bookingParams);
+    const baseUrl = buildBookingUrl(`${basePath}/success`, {
+      date: dateValue,
+      time: timeValue,
+    });
     const connector = baseUrl.includes('?') ? '&' : '?';
     const bookingId = booking.id;
     navigate(bookingId ? `${baseUrl}${connector}id=${bookingId}` : baseUrl);
@@ -166,91 +108,23 @@ export function AtlazerBookingPage() {
     <Page back>
       <Page.Content>
         <form onSubmit={handleSubmit(onSubmit)}>
-          {isLoading ? (
-            <>
-              <div className="flex flex-col items-center gap-4">
-                <Skeleton className="h-24 w-24 rounded-ui-l" />
-                <div className="flex flex-col gap-2 items-center">
-                  <Skeleton className="h-4 w-40" />
-                  <Skeleton className="h-3 w-28" />
-                </div>
-              </div>
-              <div className="mt-6 flex flex-col gap-1">
-                <div className="w-full rounded-ui-l border bg-zinc-100 px-4 py-3">
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="mt-2 h-4 w-40" />
-                </div>
-                <div className="w-full rounded-ui-l border bg-zinc-100 px-4 py-3">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="mt-2 h-4 w-32" />
-                </div>
-                <div className="w-full rounded-ui-l border bg-zinc-100 px-4 py-3">
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="mt-2 h-4 w-36" />
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <SpecialistPreview
-                name={specialist?.name ?? 'Специалист'}
-                role={specialist?.role ?? ''}
-                photo={specialist?.photo_url ?? null}
-              />
-
-              <div className="mt-6 flex flex-col gap-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigate(
-                      buildBookingUrl(`${basePath}/service`, {
-                        specialist: specialistId,
-                      }),
-                    );
-                  }}
-                  className="w-full rounded-ui-l border bg-zinc-100 px-4 py-2.5 text-left flex items-center justify-between"
-                >
-                  <span className="flex flex-col">
-                    <span className="text-sm text-black/40">Услуга</span>
-                    <span className="text-black font-medium -mt-0.5">
-                      {service?.title || 'Услуга'}
-                    </span>
-                  </span>
-                  <PenLine className="h-5 w-5 fill-black/40 text-black/40" />
-                </button>
-
-                <div className="w-full rounded-ui-l border bg-zinc-100 px-4 py-2.5 text-left">
-                  <div className="text-sm text-black/40">Стоимость</div>
-                  <div className="text-black font-medium -mt-0.5">
-                    {service?.price_text
-                      ? `${service?.price_text} · ${service?.duration_text}`
-                      : 'не указана'}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigate(
-                      buildBookingUrl(`${basePath}/datetime`, {
-                        service: serviceId,
-                        specialist: specialistId,
-                      }),
-                    );
-                  }}
-                  className="w-full rounded-ui-l border bg-zinc-100 px-4 py-2.5 text-left flex items-center justify-between"
-                >
-                  <span className="flex flex-col gap-1">
-                    <span className="text-sm text-black/40">Дата и время</span>
-                    <span className="text-black font-medium -mt-0.5">
-                      {dateTimeValue || 'Выберите дату'}
-                    </span>
-                  </span>
-                  <PenLine className="h-5 w-5 fill-black/40 text-black/40" />
-                </button>
-              </div>
-            </>
-          )}
+          <div className="mt-2 flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                navigate(buildBookingUrl(`${basePath}/branch`, {}));
+              }}
+              className="w-full rounded-ui-l border bg-zinc-100 px-4 py-2.5 text-left flex items-center justify-between"
+            >
+              <span className="flex flex-col gap-1">
+                <span className="text-sm text-black/40">Дата и время</span>
+                <span className="text-black font-medium -mt-0.5">
+                  {dateTimeValue || 'Выберите дату'}
+                </span>
+              </span>
+              <PenLine className="h-5 w-5 fill-black/40 text-black/40" />
+            </button>
+          </div>
 
           <div className="mt-8">
             <p className="text-base font-medium text-black mb-2">Ваши данные</p>
@@ -276,7 +150,7 @@ export function AtlazerBookingPage() {
                 type="email"
                 error={errors.email?.message}
                 aria-invalid={!!errors.email}
-                {...register('email', {required: 'Введите email'})}
+                {...register('email')}
               />
             </div>
             <label className="mt-8 flex items-center justify-start gap-3 text-black font-medium text-[13px]">

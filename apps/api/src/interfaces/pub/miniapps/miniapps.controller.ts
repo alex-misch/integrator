@@ -20,9 +20,12 @@ import {
   MiniappTimeslotDto,
 } from './dto/miniapp-public.dto';
 import {
+  MiniappBookDatesDto,
+  MiniappBookDatesQueryDto,
   MiniappCreateRecordDto,
   MiniappPublicBookingDto,
   MiniappRecordsQueryDto,
+  MiniappUpdateBookingDto,
 } from './dto/miniapp-record.dto';
 import {YclientsClient} from 'src/modules/integrations/yclients/yclients.service';
 import {UseTelegramGuard} from 'src/decorators/UseTelegramGuard';
@@ -32,8 +35,23 @@ import {JWT_SECRET} from 'src/utils/jwt';
 import {JwtStrategy} from '../customer/jwt.strategy';
 import {TelegramCustomerService} from 'src/modules/telegram/telegram-customer.service';
 import {TelegramCustomer} from 'src/modules/telegram/telegram-customer.entity';
+import {Miniapp} from 'src/modules/miniapp/miniapp.entity';
 import {MiniappSpecialist} from 'src/modules/miniapp/miniapp-specialist.entity';
-import {MiniappBooking} from 'src/modules/miniapp/miniapp-booking.entity';
+import {
+  MiniappBooking,
+  MiniappBookingStatus,
+} from 'src/modules/miniapp/miniapp-booking.entity';
+import {MiniappYclientsIntegration} from 'src/modules/miniapp/miniapp-yclients.entity';
+import {MiniappService} from 'src/modules/miniapp/miniapp-service.entity';
+import {normalizePhone} from 'src/utils/phone';
+
+const DEFAULT_BOOKING_SELECTION_BY_COMPANY_ID: Record<
+  number,
+  {serviceId: number; specialistId: number}
+> = {
+  122686: {serviceId: 1, specialistId: 37},
+  520803: {serviceId: 3, specialistId: 44},
+};
 
 @ApiTags('public-miniapps')
 @Controller('public/miniapps')
@@ -73,6 +91,7 @@ export class MiniappsPublicController {
         ?.filter(integration => integration.company_id)
         .map(integration => ({
           id: integration.company_id as number,
+          is_primary: integration.is_primary,
           title:
             integration.address_text ||
             integration.city ||
@@ -195,6 +214,50 @@ export class MiniappsPublicController {
     );
   }
 
+  @Get(':slug/:companyId/book-dates')
+  @ApiOperation({summary: 'Miniapp available booking dates'})
+  @ApiOkResponse({type: MiniappBookDatesDto})
+  async bookDates(
+    @Param('slug') slug: string,
+    @Param('companyId') companyId: string,
+    @Query() query?: MiniappBookDatesQueryDto,
+  ): Promise<MiniappBookDatesDto> {
+    const miniapp = await this.miniapps.findBySlug(slug);
+    if (!miniapp) {
+      throw new NotFoundException(`Miniapp ${slug} not found`);
+    }
+    const companyIdNumber = Number(companyId);
+    if (!companyIdNumber || Number.isNaN(companyIdNumber)) {
+      throw new BadRequestException('companyId is required');
+    }
+    const selectedIntegration = await this.miniapps.findIntegrationByCompanyId(
+      miniapp.id,
+      companyIdNumber,
+    );
+    if (!selectedIntegration?.company_id) {
+      throw new NotFoundException(`Integration ${companyId} not found`);
+    }
+
+    const {serviceYclientsId, specialistYclientsId} =
+      await this.resolveBookingSelection({
+        miniappId: miniapp.id,
+        integration: selectedIntegration,
+        companyId: companyIdNumber,
+      });
+
+    if (!serviceYclientsId || !specialistYclientsId) {
+      throw new BadRequestException('booking selection yclients_id not found');
+    }
+
+    return this.yclients.bookDates(selectedIntegration.company_id, {
+      staffId: specialistYclientsId,
+      serviceIds: [serviceYclientsId],
+      date: query?.date,
+      dateFrom: query?.dateFrom,
+      dateTo: query?.dateTo,
+    });
+  }
+
   @Get(':slug/:companyId/records')
   @ApiOperation({summary: 'Miniapp records'})
   @ApiOkResponse({type: MiniappTimeslotDto, isArray: true})
@@ -231,42 +294,39 @@ export class MiniappsPublicController {
     //   });
     // }
 
-    if (!query?.date || !query?.serviceId) {
-      throw new BadRequestException('date and serviceId are required');
+    if (!query?.date) {
+      throw new BadRequestException('date is required');
     }
 
-    const service = await this.miniapps.findService(
-      selectedIntegration.id,
-      Number(query.serviceId),
-    );
-    if (!service?.yclients_id) {
+    const {service, specialist, serviceYclientsId, specialistYclientsId} =
+      await this.resolveBookingSelection({
+        miniappId: miniapp.id,
+        integration: selectedIntegration,
+        companyId: companyIdNumber,
+        serviceId: query.serviceId ? Number(query.serviceId) : undefined,
+        specialistId: query.specialistId
+          ? Number(query.specialistId)
+          : undefined,
+      });
+
+    if (!serviceYclientsId) {
       throw new BadRequestException('service yclients_id not found');
     }
 
-    const specialistIdNumber = query?.specialistId
-      ? Number(query.specialistId)
-      : null;
-    const specialist = specialistIdNumber
-      ? await this.miniapps.findSpecialist(
-          selectedIntegration.id,
-          specialistIdNumber,
-        )
-      : null;
-
-    const staffId = specialist?.yclients_id ?? 0;
+    const staffId = specialistYclientsId ?? 0;
 
     try {
       const slots = await this.yclients.bookTimes({
         companyId: selectedIntegration.company_id,
         staffId,
         date: query.date,
-        serviceIds: [service.yclients_id],
+        serviceIds: [serviceYclientsId],
       });
       await this.miniapps.replaceSeances({
         miniappId: miniapp.id,
         integrationId: selectedIntegration.id,
         serviceId: service.id,
-        specialistId: specialistIdNumber ?? null,
+        specialistId: specialist?.id ?? null,
         date: query.date,
         slots,
       });
@@ -275,7 +335,7 @@ export class MiniappsPublicController {
       const cached = await this.miniapps.findSeances({
         miniappId: miniapp.id,
         serviceId: service.id,
-        specialistId: specialistIdNumber ?? null,
+        specialistId: specialist?.id ?? null,
         date: query.date,
       });
       return cached.map(slot => ({
@@ -354,38 +414,191 @@ export class MiniappsPublicController {
       throw new NotFoundException(`Integration ${companyId} not found`);
     }
 
-    const service = await this.miniapps.findService(
-      selectedIntegration.id,
-      payload.service_id,
-    );
-    if (!service) {
-      throw new BadRequestException('service not found');
-    }
-
-    const specialist = payload.specialist_id
-      ? await this.miniapps.findSpecialist(
-          selectedIntegration.id,
-          payload.specialist_id,
-        )
-      : null;
-    if (payload.specialist_id && !specialist) {
-      throw new BadRequestException('specialist not found');
-    }
-
     const customer =
       (request?.customer as TelegramCustomer | undefined) ??
       (await this.getCustomerFromRequest(request));
 
-    const booking = await this.miniapps.createBooking({
+    const booking = await this.createYclientsBackedBooking({
+      miniappId: miniapp.id,
       miniapp,
+      integration: selectedIntegration,
+      companyId: companyIdNumber,
       customer,
-      service,
-      specialist,
+      payload,
       date: payload.date,
       time: payload.time,
     });
 
     return booking;
+  }
+
+  @Post(':slug/:companyId/booking/:bookingId')
+  @ApiOperation({summary: 'Update miniapp booking'})
+  @ApiOkResponse({type: MiniappPublicBookingDto})
+  @UseTelegramGuard()
+  async updateBooking(
+    @Param('slug') slug: string,
+    @Param('companyId') companyId: string,
+    @Param('bookingId') bookingId: string,
+    @Body() payload: MiniappUpdateBookingDto,
+    @Req() request,
+  ): Promise<MiniappPublicBookingDto> {
+    const miniapp = await this.miniapps.findBySlug(slug);
+    if (!miniapp) {
+      throw new NotFoundException(`Miniapp ${slug} not found`);
+    }
+    const companyIdNumber = Number(companyId);
+    if (!companyIdNumber || Number.isNaN(companyIdNumber)) {
+      throw new BadRequestException('companyId is required');
+    }
+    const selectedIntegration = await this.miniapps.findIntegrationByCompanyId(
+      miniapp.id,
+      companyIdNumber,
+    );
+    if (!selectedIntegration?.company_id) {
+      throw new NotFoundException(`Integration ${companyId} not found`);
+    }
+    const bookingIdNumber = Number(bookingId);
+    if (!bookingIdNumber || Number.isNaN(bookingIdNumber)) {
+      throw new BadRequestException('bookingId is required');
+    }
+
+    const booking = await this.miniapps.findBookingById(
+      miniapp.id,
+      bookingIdNumber,
+    );
+    if (!booking) {
+      throw new NotFoundException(`Booking ${bookingId} not found`);
+    }
+    if (booking.service?.integration?.id !== selectedIntegration.id) {
+      throw new NotFoundException(`Booking ${bookingId} not found`);
+    }
+
+    const customer =
+      (request?.customer as TelegramCustomer | undefined) ??
+      (await this.getCustomerFromRequest(request));
+    if (booking.customer?.id !== customer.id) {
+      throw new NotFoundException(`Booking ${bookingId} not found`);
+    }
+
+    const {service, specialist, serviceYclientsId, specialistYclientsId} =
+      await this.resolveBookingSelection({
+        miniappId: miniapp.id,
+        integration: selectedIntegration,
+        companyId: companyIdNumber,
+      });
+
+    if (!serviceYclientsId || !specialistYclientsId) {
+      throw new BadRequestException('booking selection yclients_id not found');
+    }
+
+    const createdRecords = await this.yclients.bookRecord(
+      selectedIntegration.company_id,
+      this.buildYclientsBookRecordRequest({
+        phone: customer.phone,
+        fullname: this.getCustomerName(customer),
+        email: null,
+        comment: 'Перенос записи из мини-приложения',
+        date: payload.date,
+        time: payload.time,
+        serviceYclientsId,
+        specialistYclientsId,
+        apiId: `miniapp-booking-${booking.id}-reschedule-${Date.now()}`,
+      }),
+    );
+    const createdRecord = createdRecords[0];
+    if (!createdRecord?.record_id || !createdRecord.record_hash) {
+      throw new BadRequestException('YCLIENTS record was not created');
+    }
+
+    try {
+      if (booking.yclients_record_id && booking.yclients_record_hash) {
+        await this.yclients.deleteUserRecord(
+          booking.yclients_record_id,
+          booking.yclients_record_hash,
+        );
+      }
+    } catch (error) {
+      await this.yclients.deleteUserRecord(
+        createdRecord.record_id,
+        createdRecord.record_hash,
+      );
+      throw error;
+    }
+
+    const updated = await this.miniapps.updateBooking({
+      booking,
+      service,
+      specialist,
+      date: payload.date,
+      time: payload.time,
+      status: MiniappBookingStatus.Confirmed,
+      yclientsRecordId: createdRecord.record_id,
+      yclientsRecordHash: createdRecord.record_hash,
+    });
+
+    return this.toPublicBookingDto(updated);
+  }
+
+  @Post(':slug/:companyId/booking/:bookingId/cancel')
+  @ApiOperation({summary: 'Cancel miniapp booking'})
+  @ApiOkResponse({type: MiniappPublicBookingDto})
+  @UseTelegramGuard()
+  async cancelBooking(
+    @Param('slug') slug: string,
+    @Param('companyId') companyId: string,
+    @Param('bookingId') bookingId: string,
+    @Req() request,
+  ): Promise<MiniappPublicBookingDto> {
+    const miniapp = await this.miniapps.findBySlug(slug);
+    if (!miniapp) {
+      throw new NotFoundException(`Miniapp ${slug} not found`);
+    }
+    const bookingIdNumber = Number(bookingId);
+    if (!bookingIdNumber || Number.isNaN(bookingIdNumber)) {
+      throw new BadRequestException('bookingId is required');
+    }
+
+    const booking = await this.miniapps.findBookingById(
+      miniapp.id,
+      bookingIdNumber,
+    );
+    if (!booking) {
+      throw new NotFoundException(`Booking ${bookingId} not found`);
+    }
+
+    const customer =
+      (request?.customer as TelegramCustomer | undefined) ??
+      (await this.getCustomerFromRequest(request));
+    if (booking.customer?.id !== customer.id) {
+      throw new NotFoundException(`Booking ${bookingId} not found`);
+    }
+
+    const companyIdNumber = Number(companyId);
+    if (!companyIdNumber || Number.isNaN(companyIdNumber)) {
+      throw new BadRequestException('companyId is required');
+    }
+    const selectedIntegration = await this.miniapps.findIntegrationByCompanyId(
+      miniapp.id,
+      companyIdNumber,
+    );
+    if (!selectedIntegration?.company_id) {
+      throw new NotFoundException(`Integration ${companyId} not found`);
+    }
+    if (booking.service?.integration?.id !== selectedIntegration.id) {
+      throw new NotFoundException(`Booking ${bookingId} not found`);
+    }
+
+    if (booking.yclients_record_id && booking.yclients_record_hash) {
+      await this.yclients.deleteUserRecord(
+        booking.yclients_record_id,
+        booking.yclients_record_hash,
+      );
+    }
+
+    const updated = await this.miniapps.cancelBooking(booking);
+
+    return this.toPublicBookingDto(updated);
   }
 
   @Get(':slug/:companyId/booking/:bookingId')
@@ -436,6 +649,282 @@ export class MiniappsPublicController {
         ? (booking.specialist as MiniappPublicSpecialistDto)
         : null,
     };
+  }
+
+  private toPublicBookingDto(booking: MiniappBooking): MiniappPublicBookingDto {
+    return {
+      id: booking.id,
+      date: booking.date,
+      time: booking.time,
+      status: booking.status,
+      service: booking.service as MiniappPublicServiceDto,
+      specialist: booking.specialist
+        ? (booking.specialist as MiniappPublicSpecialistDto)
+        : null,
+    };
+  }
+
+  private async createYclientsBackedBooking(props: {
+    miniappId: number;
+    miniapp: Miniapp;
+    integration: MiniappYclientsIntegration;
+    companyId: number;
+    customer: TelegramCustomer;
+    payload: MiniappCreateRecordDto;
+    date: string;
+    time: string;
+  }) {
+    const {service, specialist, serviceYclientsId, specialistYclientsId} =
+      await this.resolveBookingSelection({
+        miniappId: props.miniappId,
+        integration: props.integration,
+        companyId: props.companyId,
+        serviceId: props.payload.service_id,
+        specialistId: props.payload.specialist_id ?? undefined,
+      });
+
+    if (!serviceYclientsId || !specialistYclientsId) {
+      throw new BadRequestException('booking selection yclients_id not found');
+    }
+
+    const createdRecords = await this.yclients.bookRecord(
+      props.integration.company_id,
+      this.buildYclientsBookRecordRequest({
+        phone: props.payload.client_phone,
+        fullname: props.payload.client_name,
+        email: props.payload.client_email ?? null,
+        comment: props.payload.comment ?? 'Запись из мини-приложения',
+        date: props.date,
+        time: props.time,
+        serviceYclientsId,
+        specialistYclientsId,
+        apiId: `miniapp-booking-create-${props.customer.id}-${Date.now()}`,
+      }),
+    );
+    const createdRecord = createdRecords[0];
+    if (!createdRecord?.record_id || !createdRecord.record_hash) {
+      throw new BadRequestException('YCLIENTS record was not created');
+    }
+
+    try {
+      return await this.miniapps.createBooking({
+        miniapp: props.miniapp,
+        customer: props.customer,
+        service,
+        specialist,
+        date: props.date,
+        time: props.time,
+        status: MiniappBookingStatus.Confirmed,
+        yclientsRecordId: createdRecord.record_id,
+        yclientsRecordHash: createdRecord.record_hash,
+      });
+    } catch (error) {
+      await this.yclients.deleteUserRecord(
+        createdRecord.record_id,
+        createdRecord.record_hash,
+      );
+      throw error;
+    }
+  }
+
+  private buildYclientsBookRecordRequest(props: {
+    phone: string | null | undefined;
+    fullname: string | null | undefined;
+    email: string | null | undefined;
+    comment?: string | null;
+    date: string;
+    time: string;
+    serviceYclientsId: number;
+    specialistYclientsId: number;
+    apiId: string;
+  }) {
+    const phone = normalizePhone(props.phone ?? null);
+    if (!phone) {
+      throw new BadRequestException('client_phone is required');
+    }
+
+    const fullname = props.fullname?.trim();
+    if (!fullname) {
+      throw new BadRequestException('client_name is required');
+    }
+
+    return {
+      phone,
+      fullname,
+      email: props.email?.trim() ?? '',
+      comment: props.comment ?? '',
+      type: 'mobile',
+      api_id: props.apiId,
+      appointments: [
+        {
+          id: 1,
+          services: [props.serviceYclientsId],
+          staff_id: props.specialistYclientsId,
+          datetime: this.formatYclientsDateTime(props.date, props.time),
+        },
+      ],
+      is_newsletter_allowed: false,
+      is_personal_data_processing_allowed: true,
+    };
+  }
+
+  private getCustomerName(customer: TelegramCustomer) {
+    const name = [customer.first_name, customer.last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    return name || customer.username || `Клиент ${customer.id}`;
+  }
+
+  private formatYclientsDateTime(date: string, time: string) {
+    const [hours = '00', minutes = '00', seconds = '00'] = time.split(':');
+    return `${date} ${hours.padStart(2, '0')}:${minutes.padStart(
+      2,
+      '0',
+    )}:${seconds.padStart(2, '0')}`;
+  }
+
+  private getDefaultBookingSelection(companyId: number) {
+    return DEFAULT_BOOKING_SELECTION_BY_COMPANY_ID[companyId] ?? null;
+  }
+
+  private async resolveBookingSelection(props: {
+    miniappId: number;
+    integration: MiniappYclientsIntegration;
+    companyId: number;
+    serviceId?: number | null;
+    specialistId?: number | null;
+  }): Promise<{
+    service: MiniappService;
+    specialist: MiniappSpecialist | null;
+    serviceYclientsId: number | null;
+    specialistYclientsId: number | null;
+  }> {
+    const defaults = this.getDefaultBookingSelection(props.companyId);
+    const serviceId = defaults?.serviceId ?? props.serviceId;
+    const specialistId = defaults?.specialistId ?? props.specialistId;
+
+    if (!serviceId) {
+      throw new BadRequestException('serviceId is required');
+    }
+
+    let serviceSelection = await this.findServiceForBooking(
+      props.integration.id,
+      serviceId,
+      Boolean(defaults),
+    );
+    let specialistSelection = specialistId
+      ? await this.findSpecialistForBooking(
+          props.integration.id,
+          specialistId,
+          Boolean(defaults),
+        )
+      : null;
+
+    if (!serviceSelection || (specialistId && !specialistSelection)) {
+      try {
+        await this.syncServicesAndStaff({
+          miniappId: props.miniappId,
+          integrationId: props.integration.id,
+          companyId: props.integration.company_id,
+        });
+      } catch {
+        // fallback to already cached services/staff below
+      }
+
+      serviceSelection = await this.findServiceForBooking(
+        props.integration.id,
+        serviceId,
+        Boolean(defaults),
+      );
+      specialistSelection = specialistId
+        ? await this.findSpecialistForBooking(
+            props.integration.id,
+            specialistId,
+            Boolean(defaults),
+          )
+        : null;
+    }
+
+    if (!serviceSelection) {
+      throw new BadRequestException('service not found');
+    }
+    if (specialistId && !specialistSelection) {
+      throw new BadRequestException('specialist not found');
+    }
+
+    return {
+      service: serviceSelection.service,
+      specialist: specialistSelection?.specialist ?? null,
+      serviceYclientsId: serviceSelection.yclientsId,
+      specialistYclientsId: specialistSelection?.yclientsId ?? null,
+    };
+  }
+
+  private async findServiceForBooking(
+    integrationId: number,
+    serviceId: number,
+    preferYclientsId: boolean,
+  ) {
+    const byYclientsId = preferYclientsId
+      ? await this.miniapps.findServiceByYclientsId(integrationId, serviceId)
+      : null;
+    if (byYclientsId) {
+      return {service: byYclientsId, yclientsId: serviceId};
+    }
+
+    const byLocalId = await this.miniapps.findService(integrationId, serviceId);
+    if (byLocalId) {
+      return {
+        service: byLocalId,
+        yclientsId: byLocalId.yclients_id ?? serviceId,
+      };
+    }
+
+    const fallbackByYclientsId = preferYclientsId
+      ? null
+      : await this.miniapps.findServiceByYclientsId(integrationId, serviceId);
+    return fallbackByYclientsId
+      ? {service: fallbackByYclientsId, yclientsId: serviceId}
+      : null;
+  }
+
+  private async findSpecialistForBooking(
+    integrationId: number,
+    specialistId: number,
+    preferYclientsId: boolean,
+  ) {
+    const byYclientsId = preferYclientsId
+      ? await this.miniapps.findSpecialistByYclientsId(
+          integrationId,
+          specialistId,
+        )
+      : null;
+    if (byYclientsId) {
+      return {specialist: byYclientsId, yclientsId: specialistId};
+    }
+
+    const byLocalId = await this.miniapps.findSpecialist(
+      integrationId,
+      specialistId,
+    );
+    if (byLocalId) {
+      return {
+        specialist: byLocalId,
+        yclientsId: byLocalId.yclients_id ?? specialistId,
+      };
+    }
+
+    const fallbackByYclientsId = preferYclientsId
+      ? null
+      : await this.miniapps.findSpecialistByYclientsId(
+          integrationId,
+          specialistId,
+        );
+    return fallbackByYclientsId
+      ? {specialist: fallbackByYclientsId, yclientsId: specialistId}
+      : null;
   }
 
   private async getCustomerFromRequest(request): Promise<TelegramCustomer> {

@@ -56,6 +56,9 @@ Purpose: help an AI coding agent become productive quickly in this workspace.
 7. Small gotchas for an agent
 
 - When editing entities that affect the DB schema, **never edit an existing migration file**. Update the TypeORM entity first, then generate a new migration with `pnpm -F api migration:generate src/migrations/<MigrationName>`, run it with `pnpm -F api migration:run`, and validate seeds if relevant. Existing migrations are append-only history and must remain unchanged unless the user explicitly asks to rewrite local migration history.
+- Treat migrations as deployed once they may have reached any shared/dev/prod DB. If a table or earlier migration might already exist, add a new additive migration instead of amending the old one.
+- When adding columns to an existing table, include a forward-only migration that works against the current deployed schema. For hotfix/backfill cases, prefer safe DDL such as `ADD COLUMN IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` when it must tolerate partially migrated environments.
+- Before finishing schema-related work, verify two paths: fresh DB from all migrations, and already-migrated DB receiving only the new migration. Do not rely on `synchronize: false` apps to reconcile entity changes automatically.
 - API client generation expects the backend to be running on the host/port the orval config targets. If you change server ports, update `orval.config.js` or generate with explicit URL.
 - Prefer small, focused edits. Follow existing NestJS DI patterns (providers, controllers, modules) instead of introducing non-idiomatic structure.
 - Avoid changing global monorepo scripts unless necessary — prefer per-package scripts with `pnpm -F`.
