@@ -31,6 +31,8 @@ import {MiniappBooking} from 'src/modules/miniapp/miniapp-booking.entity';
 import {MiniappSeance} from 'src/modules/miniapp/miniapp-seance.entity';
 import {SendpulseClient} from 'src/modules/integrations/sendpulse/sendpulse-clients.entity';
 import {SendpulseLog} from 'src/modules/integrations/sendpulse/sendpulse-logs.entity';
+import {LoyaltyTransaction} from 'src/modules/customer-loyalty/loyalty-transaction.entity';
+import {YclientsEvent} from 'src/modules/customer-loyalty/yclients-event.entity';
 
 @Module({
   imports: [
@@ -57,6 +59,8 @@ import {SendpulseLog} from 'src/modules/integrations/sendpulse/sendpulse-logs.en
         MiniappSeance,
         SendpulseClient,
         SendpulseLog,
+        LoyaltyTransaction,
+        YclientsEvent,
       ],
       migrations: ['dist/migrations/*.js'],
       synchronize: false,

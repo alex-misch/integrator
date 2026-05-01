@@ -114,6 +114,47 @@ export class SendpulseService {
     return normalizePhone(savedClient.phone ?? null);
   }
 
+  countReferrals(referralCode: string, telegramId?: number | string) {
+    const query = this.sendpulseClient
+      .createQueryBuilder('client')
+      .where('client.tg_referrer = :referralCode', {referralCode});
+
+    if (telegramId) {
+      query.andWhere(
+        '(client.telegram_id IS NULL OR client.telegram_id != :telegramId)',
+        {telegramId: String(telegramId)},
+      );
+    }
+
+    return query.getCount();
+  }
+
+  async findReferredClientByPhone(phone: string) {
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      return null;
+    }
+
+    const clients = await this.sendpulseClient
+      .createQueryBuilder('client')
+      .where('client.tg_referrer IS NOT NULL')
+      .andWhere('client.phone IS NOT NULL')
+      .orderBy('client.date_created', 'ASC')
+      .getMany();
+
+    return (
+      clients.find(
+        client => normalizePhone(client.phone) === normalizedPhone,
+      ) ?? null
+    );
+  }
+
+  async findReferrerCustomer(referrer: string) {
+    return this.telegramCustomers.findOne({
+      where: {referral_code: referrer, is_blocked: false},
+    });
+  }
+
   private async upsertClient(fields: SendpulseClientFields) {
     const existingClient = await this.findExistingClient(fields);
     const isNewClient = !fields.phone;
@@ -311,11 +352,5 @@ export class SendpulseService {
     }
 
     return this.referralWelcomeBonusPoints;
-  }
-
-  private async findReferrerCustomer(referrer: string) {
-    return this.telegramCustomers.findOne({
-      where: {referral_code: referrer, is_blocked: false},
-    });
   }
 }

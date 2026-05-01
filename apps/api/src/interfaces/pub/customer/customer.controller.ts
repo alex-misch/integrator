@@ -24,12 +24,16 @@ import {UseTelegramGuard} from '../../../decorators/UseTelegramGuard';
 import {TelegramCustomerService} from 'src/modules/telegram/telegram-customer.service';
 import {CustomerProfileResponse} from './dto/customer.dto';
 import {VerifyCustomerDto} from 'src/modules/telegram/dto/telegram-customer.dto';
+import {SendpulseService} from 'src/modules/integrations/sendpulse/sendpulse.service';
+import {CustomerLoyaltyService} from 'src/modules/customer-loyalty/customer-loyalty.service';
 
 @ApiTags('public-customer')
 @Controller('public/customer')
 export class CustomerPublicController {
   constructor(
     private readonly customerService: TelegramCustomerService,
+    private readonly sendpulseService: SendpulseService,
+    private readonly loyaltyService: CustomerLoyaltyService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -42,6 +46,15 @@ export class CustomerPublicController {
     const customer = await this.customerService.findOne({
       where: {id: +request.customer.id},
     });
+    const referralCount = customer.referral_code
+      ? await this.sendpulseService.countReferrals(
+          customer.referral_code,
+          customer.id,
+        )
+      : 0;
+    const referralPaymentsAmount =
+      await this.loyaltyService.getReferralPaymentBonusTotal(customer.id);
+
     return {
       id: customer.id,
       first_name: customer.first_name,
@@ -50,6 +63,8 @@ export class CustomerPublicController {
       photo_url: customer.photo_url,
       phone: customer.phone,
       referral_code: customer.referral_code,
+      referral_count: referralCount,
+      referral_payments_amount: referralPaymentsAmount,
     };
   }
 

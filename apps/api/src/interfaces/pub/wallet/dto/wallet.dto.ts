@@ -1,25 +1,12 @@
 import {ApiProperty} from '@nestjs/swagger';
 import {Type} from 'class-transformer';
-import {IsNumber, IsOptional, IsString, Min} from 'class-validator';
+import {IsNumber} from 'class-validator';
 
 export class WalletCompanyQueryDto {
   @ApiProperty({example: 1714663})
   @Type(() => Number)
   @IsNumber()
   company_id: number;
-}
-
-export class WalletAmountDto extends WalletCompanyQueryDto {
-  @ApiProperty({example: 100})
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0.01)
-  amount: number;
-
-  @ApiProperty({required: false, example: 'Manual topup'})
-  @IsOptional()
-  @IsString()
-  title?: string;
 }
 
 export class WalletBalanceResponseDto {

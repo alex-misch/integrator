@@ -4,21 +4,17 @@
  * integrator project API
  * OpenAPI spec version: 1.0
  */
-import {useMutation, useQuery} from '@tanstack/react-query';
+import {useQuery} from '@tanstack/react-query';
 import type {
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
-  MutationFunction,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
-  UseMutationOptions,
-  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from '@tanstack/react-query';
 import type {
-  WalletAmountDto,
   WalletBalanceResponseDto,
   WalletPublicControllerBalanceParams,
 } from '../integratorProjectAPI.schemas';
@@ -177,152 +173,3 @@ export function useWalletPublicControllerBalance<
 
   return query;
 }
-
-/**
- * @summary Temporary method to top up loyalty balance
- */
-export const walletPublicControllerTopup = (
-  walletAmountDto: WalletAmountDto,
-) => {
-  return customFetch<WalletBalanceResponseDto>({
-    url: `/api/public/wallet/topup`,
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    data: walletAmountDto,
-  });
-};
-
-export const getWalletPublicControllerTopupMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof walletPublicControllerTopup>>,
-    TError,
-    {data: WalletAmountDto},
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof walletPublicControllerTopup>>,
-  TError,
-  {data: WalletAmountDto},
-  TContext
-> => {
-  const {mutation: mutationOptions} = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof walletPublicControllerTopup>>,
-    {data: WalletAmountDto}
-  > = props => {
-    const {data} = props ?? {};
-
-    return walletPublicControllerTopup(data);
-  };
-
-  return {mutationFn, ...mutationOptions};
-};
-
-export type WalletPublicControllerTopupMutationResult = NonNullable<
-  Awaited<ReturnType<typeof walletPublicControllerTopup>>
->;
-export type WalletPublicControllerTopupMutationBody = WalletAmountDto;
-export type WalletPublicControllerTopupMutationError = ErrorType<unknown>;
-
-/**
- * @summary Temporary method to top up loyalty balance
- */
-export const useWalletPublicControllerTopup = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof walletPublicControllerTopup>>,
-    TError,
-    {data: WalletAmountDto},
-    TContext
-  >;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof walletPublicControllerTopup>>,
-  TError,
-  {data: WalletAmountDto},
-  TContext
-> => {
-  const mutationOptions =
-    getWalletPublicControllerTopupMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-/**
- * @summary Temporary method to spend loyalty balance
- */
-export const walletPublicControllerSpend = (
-  walletAmountDto: WalletAmountDto,
-) => {
-  return customFetch<WalletBalanceResponseDto>({
-    url: `/api/public/wallet/spend`,
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    data: walletAmountDto,
-  });
-};
-
-export const getWalletPublicControllerSpendMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof walletPublicControllerSpend>>,
-    TError,
-    {data: WalletAmountDto},
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof walletPublicControllerSpend>>,
-  TError,
-  {data: WalletAmountDto},
-  TContext
-> => {
-  const {mutation: mutationOptions} = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof walletPublicControllerSpend>>,
-    {data: WalletAmountDto}
-  > = props => {
-    const {data} = props ?? {};
-
-    return walletPublicControllerSpend(data);
-  };
-
-  return {mutationFn, ...mutationOptions};
-};
-
-export type WalletPublicControllerSpendMutationResult = NonNullable<
-  Awaited<ReturnType<typeof walletPublicControllerSpend>>
->;
-export type WalletPublicControllerSpendMutationBody = WalletAmountDto;
-export type WalletPublicControllerSpendMutationError = ErrorType<unknown>;
-
-/**
- * @summary Temporary method to spend loyalty balance
- */
-export const useWalletPublicControllerSpend = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof walletPublicControllerSpend>>,
-    TError,
-    {data: WalletAmountDto},
-    TContext
-  >;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof walletPublicControllerSpend>>,
-  TError,
-  {data: WalletAmountDto},
-  TContext
-> => {
-  const mutationOptions =
-    getWalletPublicControllerSpendMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};

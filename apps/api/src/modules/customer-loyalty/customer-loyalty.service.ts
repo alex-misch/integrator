@@ -3,15 +3,32 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import {InjectRepository} from '@nestjs/typeorm';
+import {Repository} from 'typeorm';
 import {YclientsClient} from '../integrations/yclients/yclients.service';
 import {TelegramCustomerService} from '../telegram/telegram-customer.service';
 import {normalizePhone} from 'src/utils/phone';
 import type {YclientsClientListItem} from '../integrations/yclients/yclient.types';
 import {SendpulseService} from '../integrations/sendpulse/sendpulse.service';
+import {TelegramCustomer} from '../telegram/telegram-customer.entity';
+import {SendpulseClient} from '../integrations/sendpulse/sendpulse-clients.entity';
+import {LoyaltyTransaction} from './loyalty-transaction.entity';
+import {YclientsEvent} from './yclients-event.entity';
+
+type AccrueReferralPaymentBonusParams = {
+  donor: TelegramCustomer;
+  companyId: number;
+  purchaseAmount: number;
+  rewardAmount: number;
+  event: YclientsEvent;
+  referredClient: SendpulseClient;
+};
 
 @Injectable()
 export class CustomerLoyaltyService {
   constructor(
+    @InjectRepository(LoyaltyTransaction)
+    private readonly transactions: Repository<LoyaltyTransaction>,
     private readonly yclients: YclientsClient,
     private readonly customers: TelegramCustomerService,
     private readonly sendpulse: SendpulseService,
@@ -30,64 +47,66 @@ export class CustomerLoyaltyService {
     };
   }
 
-  async topup(
-    customerId: number,
-    companyId: number,
-    amount: number,
-    title?: string,
-  ) {
-    if (amount <= 0) {
-      throw new BadRequestException('amount must be greater than 0');
-    }
+  async getReferralPaymentBonusTotal(customerId: number) {
+    const row = await this.transactions
+      .createQueryBuilder('transaction')
+      .select('COALESCE(SUM(transaction.amount), 0)', 'total')
+      .where('transaction.customer_id = :customerId', {customerId})
+      .andWhere('transaction.source = :source', {
+        source: 'referral_payment_bonus',
+      })
+      .getRawOne<{total: string}>();
 
-    const context = await this.getWalletContext(customerId, companyId);
-    const card = await this.yclients.loyaltyCardManualTransaction(
-      companyId,
-      context.card.id,
-      {
-        amount,
-        title,
-      },
-    );
-
-    return {
-      company_id: companyId,
-      yclients_client_id: context.yclientsClient?.id ?? null,
-      card_id: card.id,
-      card_number: String(card.number),
-      balance: card.balance,
-      points: card.points,
-    };
+    return Number(row?.total ?? 0);
   }
 
-  async spend(
-    customerId: number,
-    companyId: number,
-    amount: number,
-    title?: string,
-  ) {
-    if (amount <= 0) {
-      throw new BadRequestException('amount must be greater than 0');
+  async accrueReferralPaymentBonus({
+    donor,
+    companyId,
+    purchaseAmount,
+    rewardAmount,
+    event,
+    referredClient,
+  }: AccrueReferralPaymentBonusParams) {
+    const existingTransaction = await this.transactions.findOne({
+      where: {
+        source: 'referral_payment_bonus',
+        yclients_event_id: event.id,
+      },
+    });
+    if (existingTransaction) {
+      return existingTransaction;
     }
 
-    const context = await this.getWalletContext(customerId, companyId);
+    const context = await this.getWalletContext(donor.id, companyId);
+    const title = '5% по реферальной программе';
     const card = await this.yclients.loyaltyCardManualTransaction(
       companyId,
       context.card.id,
       {
-        amount: -Math.abs(amount),
+        amount: rewardAmount,
         title,
       },
     );
 
-    return {
-      company_id: companyId,
-      yclients_client_id: context.yclientsClient?.id ?? null,
-      card_id: card.id,
-      card_number: String(card.number),
-      balance: card.balance,
-      points: card.points,
-    };
+    return this.transactions.save(
+      this.transactions.create({
+        source: 'referral_payment_bonus',
+        customer_id: donor.id,
+        referred_client_record_id: referredClient.record_id,
+        yclients_event_id: event.id,
+        company_id: companyId,
+        card_id: card.id,
+        amount: rewardAmount,
+        purchase_amount: purchaseAmount,
+        title,
+        metadata: {
+          event_name: event.event_name,
+          referred_phone: referredClient.phone,
+          tg_referrer: referredClient.tg_referrer,
+        },
+      }),
+    );
   }
 
   private async getWalletContext(customerId: number, companyId: number) {
@@ -179,16 +198,38 @@ export class CustomerLoyaltyService {
     companyId: number,
     card: Awaited<ReturnType<YclientsClient['issueLoyaltyCard']>>,
   ) {
-    const cardWithBonus = await this.sendpulse.applyPendingReferralPoints(
+    const bonusResult = await this.sendpulse.applyPendingReferralPoints(
       customerId,
-      points =>
-        this.yclients.loyaltyCardManualTransaction(companyId, card.id, {
-          amount: points,
-          title: 'Приветственный бонус по рефералке',
-        }),
+      async points => {
+        const cardWithBonus = await this.yclients.loyaltyCardManualTransaction(
+          companyId,
+          card.id,
+          {
+            amount: points,
+            title: 'Приветственный бонус по рефералке',
+          },
+        );
+
+        await this.transactions.save(
+          this.transactions.create({
+            source: 'welcome_referral_bonus',
+            customer_id: customerId,
+            referred_client_record_id: null,
+            yclients_event_id: null,
+            company_id: companyId,
+            card_id: cardWithBonus.id,
+            amount: points,
+            purchase_amount: null,
+            title: 'Приветственный бонус по рефералке',
+            metadata: null,
+          }),
+        );
+
+        return {card: cardWithBonus};
+      },
     );
 
-    return cardWithBonus ?? card;
+    return bonusResult?.card ?? card;
   }
 
   private findYclientsClientByPhone(

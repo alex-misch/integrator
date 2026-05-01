@@ -23,12 +23,6 @@ export type MiniappsPublicControllerServicesParams = {
   specialistId: string;
 };
 
-export interface WalletAmountDto {
-  amount: number;
-  company_id: number;
-  title?: string;
-}
-
 export interface WalletBalanceResponseDto {
   balance: number;
   card_id: number;
@@ -226,6 +220,8 @@ export interface CustomerProfileResponse {
   photo_url: string | null;
   /** @nullable */
   referral_code: string | null;
+  referral_count: number;
+  referral_payments_amount: number;
   /** @nullable */
   username: string | null;
 }

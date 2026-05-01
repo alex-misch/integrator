@@ -2,7 +2,6 @@ import {Page} from '@/components/Layout/Page.tsx';
 import {Badge} from '@/components/ui/badge';
 import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
-import {Input} from '@/components/ui/input';
 import {Skeleton} from '@/components/ui/skeleton';
 import {LocationIcon, SelectArrowIcon} from '@/uikit/icons';
 import {ArrowUpRight, Share2, StarIcon} from 'lucide-react';
@@ -15,8 +14,6 @@ import {
   useMiniappsPublicControllerBySlug,
   useMiniappsPublicControllerBookings,
   useWalletPublicControllerBalance,
-  useWalletPublicControllerSpend,
-  useWalletPublicControllerTopup,
 } from '@integrator/api-client/public';
 import {getMiniappBasePath, useMiniappParams} from '@/lib/miniapp';
 import {shareURL} from '@telegram-apps/sdk-react';
@@ -245,26 +242,50 @@ export function AtlazerPage() {
         </div>
         <WalletCard companyId={companyId} />
         {referralLink && (
-          <div className="mt-8 rounded-ui-l bg-zinc-100 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xl font-medium">Пригласить друга</p>
-                <p className="mt-1 truncate text-sm text-black/40">
+          <button
+            type="button"
+            className="mt-8 w-full overflow-hidden rounded-ui-l bg-[#dbeafe] text-left text-[#0f172a] shadow-[0_14px_34px_rgba(59,130,246,0.14)] transition active:scale-[0.99]"
+            onClick={shareReferralLink}
+          >
+            <div className="p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-blue-700/60">
+                    Реферальная программа
+                  </p>
+                  <p className="mt-1 text-2xl font-medium">Пригласить друга</p>
+                  <p className="mt-2 text-sm leading-snug text-blue-900/55">
+                    Вам - 5% от покупок друга <br />
+                    другу - 3000 приветственных бонусов
+                  </p>
+                </div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-blue-600">
+                  <Share2 className="h-5 w-5" />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <p className="truncate rounded-2xl bg-white/75 px-3 py-2 text-sm font-medium text-blue-700">
                   {referralLink}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="primary"
-                rounded="full"
-                size="icon"
-                aria-label="Поделиться"
-                onClick={shareReferralLink}
-              >
-                <Share2 className="h-[18px] w-[18px]" />
-              </Button>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="flex flex-col items-center rounded-2xl bg-white/55 px-3 py-3">
+                  <p className="text-3xl font-medium leading-none">
+                    {profile?.referral_count ?? 0}
+                  </p>
+                  <p className="mt-1 text-sm text-blue-700/60">приглашений</p>
+                </div>
+                <div className="flex flex-col items-center rounded-2xl bg-white/55 px-3 py-3">
+                  <p className="text-3xl font-medium leading-none">
+                    {formatRubles(profile?.referral_payments_amount ?? 0)}
+                  </p>
+                  <p className="mt-1 text-sm text-blue-700/60">с оплат</p>
+                </div>
+              </div>
             </div>
-          </div>
+          </button>
         )}
         <OrgContacts
           title={title}
@@ -419,117 +440,77 @@ export function AtlazerPage() {
 function WalletCard({companyId}: {companyId?: string}) {
   const companyIdNumber = Number(companyId);
   const isEnabled = Boolean(companyIdNumber) && !Number.isNaN(companyIdNumber);
-  const [amount, setAmount] = useState('100');
-
   const {
     data: wallet,
     isLoading,
-    isFetching,
     isError,
-    refetch,
   } = useWalletPublicControllerBalance(
     {company_id: companyIdNumber},
     {query: {enabled: isEnabled}},
   );
-
-  const {mutate: topup, isPending: isTopupPending} =
-    useWalletPublicControllerTopup({
-      mutation: {
-        onSuccess: () => refetch(),
-      },
-    });
-
-  const {mutate: spend, isPending: isSpendPending} =
-    useWalletPublicControllerSpend({
-      mutation: {
-        onSuccess: () => refetch(),
-      },
-    });
-
-  const numericAmount = Number(amount);
-  const isAmountValid = Number.isFinite(numericAmount) && numericAmount > 0;
-  const isSubmitting = isTopupPending || isSpendPending;
+  const cardNumber = wallet?.card_number
+    ? formatCardNumber(wallet.card_number)
+    : '••••• ••••• •••••';
+  const formattedBalance = formatRubles(wallet?.balance ?? 0);
 
   return (
-    <div className="mt-8 rounded-ui-l bg-zinc-100 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xl font-medium">Баллы</p>
-          <p className="mt-1 text-sm text-black/40">
-            Тестовый кошелек лояльности
-          </p>
-        </div>
-        {(isLoading || isFetching) && (
-          <Skeleton className="h-8 w-24 rounded-full" />
+    <div className="mt-8">
+      <div className="relative aspect-[2.2] overflow-hidden rounded-ui-l bg-black text-white shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
+        <div className="absolute inset-x-0 top-0 h-1 bg-blue-500" />
+        {isLoading ? (
+          <Skeleton className="h-full w-full bg-white/50" />
+        ) : (
+          <div className="p-5 flex h-full flex-col justify-between">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase text-white/50">
+                  Карта лояльности
+                </p>
+                <p className="mt-1 text-lg font-medium">ATLazer</p>
+              </div>
+              <div className="flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs uppercase text-white/40">Номер карты</p>
+                  <p className="mt-1 truncate font-mono text-sm">
+                    {cardNumber}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm text-white/50">Баланс</p>
+              <p className="mt-1 text-[42px] font-medium leading-none">
+                {formattedBalance}
+              </p>
+            </div>
+          </div>
         )}
       </div>
-
-      {!isLoading && (
-        <div className="mt-4">
-          <p className="text-4xl font-medium leading-none">
-            {wallet?.points ?? 0}
-          </p>
-          <p className="mt-2 text-sm text-black/40">
-            Баланс: {wallet?.balance ?? 0}
-          </p>
-        </div>
-      )}
 
       {isError && (
         <p className="mt-3 text-sm text-red-500">
           Не удалось загрузить кошелек
         </p>
       )}
-
-      <div className="mt-4">
-        <Input
-          inputMode="decimal"
-          type="number"
-          min="0"
-          step="1"
-          value={amount}
-          onChange={event => setAmount(event.target.value)}
-          placeholder="Сумма"
-          className="h-12 bg-white pt-0 text-base"
-        />
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button
-          variant="primary"
-          rounded="ui"
-          disabled={!isEnabled || !isAmountValid || isSubmitting}
-          onClick={() =>
-            topup({
-              data: {
-                company_id: companyIdNumber,
-                amount: numericAmount,
-                title: 'Topup from miniapp',
-              },
-            })
-          }
-        >
-          Пополнить
-        </Button>
-        <Button
-          variant="secondary"
-          rounded="ui"
-          disabled={!isEnabled || !isAmountValid || isSubmitting}
-          onClick={() =>
-            spend({
-              data: {
-                company_id: companyIdNumber,
-                amount: numericAmount,
-                title: 'Spend from miniapp',
-              },
-            })
-          }
-        >
-          Списать
-        </Button>
-      </div>
     </div>
   );
+}
+
+function formatRubles(value: number) {
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatCardNumber(value: string) {
+  return value
+    .replace(/\D/g, '')
+    .slice(0, 15)
+    .replace(/(.{5})/g, '$1 ')
+    .trim();
 }
 
 const ButtonBox = (props: PropsWithChildren<{onClick: VoidFunction}>) => {
