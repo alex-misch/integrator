@@ -7,6 +7,7 @@ import {SendpulseModule} from '../integrations/sendpulse/sendpulse.module';
 import {LoyaltyTransaction} from './loyalty-transaction.entity';
 import {YclientsEvent} from './yclients-event.entity';
 import {YclientsEventsProcessor} from './yclients-events.processor';
+import {YclientsEventsService} from './yclients-events.service';
 
 @Module({
   imports: [
@@ -14,7 +15,12 @@ import {YclientsEventsProcessor} from './yclients-events.processor';
     TelegramCustomerModule,
     SendpulseModule,
   ],
-  providers: [CustomerLoyaltyService, YclientsClient, YclientsEventsProcessor],
-  exports: [CustomerLoyaltyService],
+  providers: [
+    CustomerLoyaltyService,
+    YclientsClient,
+    YclientsEventsProcessor,
+    YclientsEventsService,
+  ],
+  exports: [CustomerLoyaltyService, YclientsEventsService],
 })
 export class CustomerLoyaltyModule {}

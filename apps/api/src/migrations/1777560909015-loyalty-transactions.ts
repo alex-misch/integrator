@@ -5,13 +5,19 @@ export class LoyaltyTransactions1777560909015 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `CREATE TABLE "yclients_events" ("id" BIGSERIAL NOT NULL, "phone" character varying NOT NULL, "event_name" character varying NOT NULL, "amount" numeric(12,2) NOT NULL, "company_id" integer, "processed" boolean NOT NULL DEFAULT false, "process_error" text, "date_processed" TIMESTAMP WITH TIME ZONE, "json" jsonb, "date_created" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "date_updated" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_3e9a4cd9f847c5a500c4f3f797d" PRIMARY KEY ("id"))`,
+      `CREATE TABLE "yclients_events" ("id" BIGSERIAL NOT NULL, "phone" character varying NOT NULL, "event_name" character varying NOT NULL, "resource" character varying, "resource_id" integer, "status" character varying, "amount" numeric(12,2) NOT NULL, "company_id" integer, "processed" boolean NOT NULL DEFAULT false, "process_error" text, "date_processed" TIMESTAMP WITH TIME ZONE, "json" jsonb, "date_created" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "date_updated" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_3e9a4cd9f847c5a500c4f3f797d" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
       `CREATE INDEX "IDX_08c043c8149d6a20c25b1dd4c7" ON "yclients_events" ("event_name") `,
     );
     await queryRunner.query(
       `CREATE INDEX "IDX_7d921c74ec432e8a94c55799b1" ON "yclients_events" ("processed") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_c5e743e93d975799a4e38ad3a4" ON "yclients_events" ("resource_id") `,
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX "IDX_yclients_events_payment_unique" ON "yclients_events" ("resource_id") WHERE "resource_id" IS NOT NULL AND "event_name" = 'payment'`,
     );
     await queryRunner.query(
       `CREATE TABLE "loyalty_transactions" ("id" BIGSERIAL NOT NULL, "source" character varying NOT NULL, "customer_id" bigint NOT NULL, "referred_client_record_id" bigint, "yclients_event_id" bigint, "company_id" integer NOT NULL, "card_id" integer NOT NULL, "amount" numeric(12,2) NOT NULL, "purchase_amount" numeric(12,2), "title" character varying, "metadata" jsonb, "date_created" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_df453f678b7575221b335673362" PRIMARY KEY ("id"))`,
@@ -45,7 +51,13 @@ export class LoyaltyTransactions1777560909015 implements MigrationInterface {
     );
     await queryRunner.query(`DROP TABLE "loyalty_transactions"`);
     await queryRunner.query(
+      `DROP INDEX "public"."IDX_yclients_events_payment_unique"`,
+    );
+    await queryRunner.query(
       `DROP INDEX "public"."IDX_7d921c74ec432e8a94c55799b1"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_c5e743e93d975799a4e38ad3a4"`,
     );
     await queryRunner.query(
       `DROP INDEX "public"."IDX_08c043c8149d6a20c25b1dd4c7"`,

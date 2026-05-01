@@ -16,6 +16,10 @@ const numberTransformer = {
   },
 };
 
+@Index('IDX_yclients_events_payment_unique', ['resource_id'], {
+  unique: true,
+  where: `"resource_id" IS NOT NULL AND "event_name" = 'payment'`,
+})
 @Entity('yclients_events')
 export class YclientsEvent {
   @PrimaryGeneratedColumn({type: 'bigint'})
@@ -27,6 +31,16 @@ export class YclientsEvent {
   @Index()
   @Column({type: 'varchar'})
   event_name: string;
+
+  @Column({type: 'varchar', nullable: true})
+  resource: string | null;
+
+  @Index()
+  @Column({type: 'int', nullable: true})
+  resource_id: number | null;
+
+  @Column({type: 'varchar', nullable: true})
+  status: string | null;
 
   @Column({
     type: 'numeric',

@@ -19,6 +19,7 @@ import {CustomerPublicModule} from 'src/interfaces/pub/customer/customer.module'
 import {MiniappsPublicModule} from 'src/interfaces/pub/miniapps/miniapps.module';
 import {SendpulsePublicModule} from 'src/interfaces/pub/sendpulse/sendpulse.module';
 import {WalletPublicModule} from 'src/interfaces/pub/wallet/wallet.module';
+import {WebhookPublicModule} from 'src/interfaces/pub/webhook/webhook.module';
 import {TelegramCustomerModule} from 'src/modules/telegram/telegram-customer.module';
 import {TelegramCustomer} from 'src/modules/telegram/telegram-customer.entity';
 import {TelegramLogs} from 'src/modules/telegram/telegram-log.entity';
@@ -82,6 +83,7 @@ import {YclientsEvent} from 'src/modules/customer-loyalty/yclients-event.entity'
     MiniappsPublicModule,
     SendpulsePublicModule,
     WalletPublicModule,
+    WebhookPublicModule,
     TelegramCustomerModule,
     SendpulsePublicModule,
   ],
