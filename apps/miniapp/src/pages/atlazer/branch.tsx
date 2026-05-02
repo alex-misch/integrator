@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {useEffect, useMemo} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
 import {Check, MapPin} from 'lucide-react';
 import {Page} from '@/components/Layout/Page.tsx';
@@ -8,6 +8,7 @@ import {Skeleton} from '@/components/ui/skeleton';
 import {useMiniappsPublicControllerBySlug} from '@integrator/api-client/public';
 import {
   getMiniappBasePath,
+  getStoredMiniappCompanyId,
   setStoredMiniappCompanyId,
   useMiniappParams,
 } from '@/lib/miniapp';
@@ -46,17 +47,23 @@ export function AtlazerBranchPage() {
   }, [miniapp]);
 
   const selectedCompanyId = companyId || String(companies[0]?.id ?? '');
+  const storedCompanyId = slug ? getStoredMiniappCompanyId(slug) : undefined;
 
-  const goToDateTime = (nextCompanyId = selectedCompanyId) => {
+  const goToDateTime = (nextCompanyId = selectedCompanyId, replace = false) => {
     if (!slug || !nextCompanyId) return;
     setStoredMiniappCompanyId(slug, String(nextCompanyId));
-    navigate(
-      buildBookingUrl(
-        `${getMiniappBasePath(slug, String(nextCompanyId))}/datetime`,
-        bookingParams,
-      ),
+    const url = buildBookingUrl(
+      `${getMiniappBasePath(slug, String(nextCompanyId))}/datetime`,
+      bookingParams,
     );
+    navigate(url, replace ? {replace: true} : undefined);
   };
+
+  useEffect(() => {
+    if (storedCompanyId) {
+      goToDateTime(storedCompanyId, true);
+    }
+  }, [storedCompanyId]);
 
   return (
     <Page back>

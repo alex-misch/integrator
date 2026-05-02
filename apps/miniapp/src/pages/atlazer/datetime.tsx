@@ -401,7 +401,9 @@ export function AtlazerDateTimePage() {
                     time: selectedTime,
                   },
                 });
-                navigate(`${basePath}/success?id=${bookingId}`);
+                navigate(`${basePath}/success?id=${bookingId}`, {
+                  replace: true,
+                });
                 return;
               }
 

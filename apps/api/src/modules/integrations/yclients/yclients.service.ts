@@ -7,6 +7,7 @@ import type {
   BookRecordResponse,
   BookRecordRequest,
   DeleteUserRecordResponse,
+  CompanyCommentsResponse,
   CompaniesResponse,
   CompanyResponse,
   RecordsResponse,
@@ -309,6 +310,34 @@ export class YclientsClient {
     });
 
     return this.unwrap(r, 'deleteUserRecord').data;
+  }
+
+  async companyComments(
+    companyId: number,
+    query?: {
+      startDate?: IsoDate;
+      endDate?: IsoDate;
+      staffId?: number;
+      rating?: number;
+      page?: number;
+      count?: number;
+    },
+  ): Promise<CompanyCommentsResponse['data']> {
+    const r = await this.request<
+      CompanyCommentsResponse['data'],
+      CompanyCommentsResponse['meta']
+    >('GET', `/api/v1/comments/${companyId}/`, {
+      query: {
+        start_date: query?.startDate,
+        end_date: query?.endDate,
+        staff_id: query?.staffId,
+        rating: query?.rating,
+        page: query?.page,
+        count: query?.count,
+      },
+    });
+
+    return this.unwrap(r, 'companyComments').data;
   }
 
   // ------------------------------------------------------------

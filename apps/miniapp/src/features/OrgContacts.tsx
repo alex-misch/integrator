@@ -2,6 +2,7 @@ import {useEffect, useRef} from 'react';
 import {EarthIcon, PhoneIcon} from 'lucide-react';
 import type ymaps from 'yandex-maps';
 import {Telegram, WhatsApp} from '@/uikit/icons';
+import {openLink} from '@telegram-apps/sdk-react';
 
 const YMAPS_API_KEY = import.meta.env.VITE_YMAPS_API_KEY;
 const YMAPS_SCRIPT_ID = 'ymaps-script';
@@ -106,6 +107,7 @@ export function OrgContacts({
             center: mapCoords,
             zoom: 16,
             controls: [],
+            behaviors: [],
           },
           {
             suppressMapOpenBlock: true,
@@ -171,7 +173,14 @@ export function OrgContacts({
           </p>
         )}
         {website && (
-          <p className="flex items-center gap-2.5 py-1 text-blue-500">
+          <p
+            className="flex items-center gap-2.5 py-1 text-blue-500"
+            onClick={() =>
+              openLink(
+                website.startsWith('https') ? website : `https://${website}`,
+              )
+            }
+          >
             <EarthIcon className="h-[18px] w-[18px]" /> {website}
           </p>
         )}

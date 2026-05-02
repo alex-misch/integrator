@@ -10,6 +10,7 @@ type PageProps = React.HTMLAttributes<HTMLDivElement> &
      * True if it is allowed to go back from this page.
      */
     back?: boolean;
+    onBack?: () => void;
     className?: string;
   }>;
 
@@ -33,7 +34,13 @@ const hasPreviousRoute = () => {
   return hasPreviousRoute;
 };
 
-const Page: PageComponent = ({children, className, style, back = false}) => {
+const Page: PageComponent = ({
+  children,
+  className,
+  style,
+  back = false,
+  onBack,
+}) => {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,12 +49,16 @@ const Page: PageComponent = ({children, className, style, back = false}) => {
       if (hasPreviousRoute()) {
         backButton.show();
         return backButton.onClick(() => {
+          if (onBack) {
+            onBack();
+            return;
+          }
           navigate(-1);
         });
       }
     }
     backButton.hide();
-  }, [back, navigate]);
+  }, [back, navigate, onBack]);
 
   const isMobile = useIsMobile();
 

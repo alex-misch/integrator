@@ -8,11 +8,16 @@ type PhoneInputProps = Omit<
 > &
   Omit<RPNInput.Props<typeof RPNInput.default>, 'onChange'> & {
     onChange?: (value: string) => void;
+    label?: string;
+    error?: string;
   };
 
 const PhoneInput: React.ForwardRefExoticComponent<PhoneInputProps> =
   React.forwardRef<React.ElementRef<typeof RPNInput.default>, PhoneInputProps>(
-    ({className, onChange, value, ...props}, ref) => {
+    ({className, onChange, onFocus, value, ...props}, ref) => {
+      const hasValue =
+        typeof value === 'string' ? value.trim().length > 0 : Boolean(value);
+
       return (
         <RPNInput.default
           ref={ref}
@@ -33,6 +38,12 @@ const PhoneInput: React.ForwardRefExoticComponent<PhoneInputProps> =
            * @param {E164Number | undefined} value - The entered value
            */
           onChange={value => onChange?.(value || ('' as RPNInput.Value))}
+          onFocus={event => {
+            if (!hasValue) {
+              onChange?.('+7');
+            }
+            onFocus?.(event);
+          }}
           {...props}
         />
       );

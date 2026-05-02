@@ -5,6 +5,7 @@ import {Page} from '@/components/Layout/Page.tsx';
 import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
 import {FloatingLabelInput} from '@/components/ui/input';
+import {PhoneInput} from '@/components/ui/phone-input';
 import {useMiniappsPublicControllerCreateRecord} from '@integrator/api-client/public';
 import {getMiniappBasePath, useMiniappParams} from '@/lib/miniapp';
 import {
@@ -101,7 +102,9 @@ export function AtlazerBookingPage() {
     });
     const connector = baseUrl.includes('?') ? '&' : '?';
     const bookingId = booking.id;
-    navigate(bookingId ? `${baseUrl}${connector}id=${bookingId}` : baseUrl);
+    navigate(bookingId ? `${baseUrl}${connector}id=${bookingId}` : baseUrl, {
+      replace: true,
+    });
   };
 
   return (
@@ -136,13 +139,22 @@ export function AtlazerBookingPage() {
                 aria-invalid={!!errors.name}
                 {...register('name', {required: 'Введите имя'})}
               />
-              <FloatingLabelInput
-                id="client-phone"
-                label="Телефон"
-                type="tel"
-                error={errors.phone?.message}
-                aria-invalid={!!errors.phone}
-                {...register('phone', {required: 'Введите телефон'})}
+              <Controller
+                name="phone"
+                control={control}
+                rules={{required: 'Введите телефон'}}
+                render={({field}) => (
+                  <PhoneInput
+                    id="client-phone"
+                    label="Телефон"
+                    defaultCountry="RU"
+                    error={errors.phone?.message}
+                    aria-invalid={!!errors.phone}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                  />
+                )}
               />
               <FloatingLabelInput
                 id="client-email"

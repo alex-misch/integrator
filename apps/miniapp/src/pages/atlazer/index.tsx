@@ -3,6 +3,13 @@ import {Badge} from '@/components/ui/badge';
 import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
 import {Skeleton} from '@/components/ui/skeleton';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {LocationIcon, SelectArrowIcon} from '@/uikit/icons';
 import {ArrowUpRight, Share2, StarIcon} from 'lucide-react';
 import {PropsWithChildren, useEffect, useMemo, useRef, useState} from 'react';
@@ -13,14 +20,17 @@ import {
   useCustomerPublicControllerProfile,
   useMiniappsPublicControllerBySlug,
   useMiniappsPublicControllerBookings,
+  useMiniappsPublicControllerYclientsRecordsStatus,
   useWalletPublicControllerBalance,
 } from '@integrator/api-client/public';
 import {
+  getStoredMiniappCompanyId,
   getMiniappBasePath,
   setStoredMiniappCompanyId,
   useMiniappParams,
 } from '@/lib/miniapp';
-import {shareURL} from '@telegram-apps/sdk-react';
+import {openTelegramLink, shareURL} from '@telegram-apps/sdk-react';
+import {ReviewsYclientsCompany} from './ReviewsYclientsCompany';
 
 export function AtlazerPage() {
   const buttonsBlockRef = useRef<HTMLDivElement | null>(null);
@@ -31,6 +41,7 @@ export function AtlazerPage() {
     isVisible: false,
   });
   const [showBookingCta, setShowBookingCta] = useState(false);
+  const [repeatBookingOpen, setRepeatBookingOpen] = useState(false);
   const photosTrackWidth = 40;
   const {slug, companyId} = useMiniappParams();
   const basePath = getMiniappBasePath(slug, companyId);
@@ -42,6 +53,14 @@ export function AtlazerPage() {
     useMiniappsPublicControllerBookings(slug, companyId, {
       query: {enabled: !!(slug && companyId)},
     });
+  const {
+    data: yclientsRecordsStatus,
+    isLoading: isYclientsRecordsStatusLoading,
+  } = useMiniappsPublicControllerYclientsRecordsStatus(slug, companyId, {
+    query: {
+      enabled: !!(slug && companyId) && !isBookingsLoading && !bookings.length,
+    },
+  });
   const {data: profile} = useCustomerPublicControllerProfile();
   const primaryIntegration = miniapp?.integration ?? null;
   const companies = miniapp?.companies ?? [];
@@ -60,6 +79,11 @@ export function AtlazerPage() {
   const photos = miniapp?.photos ?? [];
   const reviews = miniapp?.reviews ?? [];
   const latestRecord = bookings[0];
+  const hasAnyRecord = Boolean(
+    latestRecord || yclientsRecordsStatus?.has_records,
+  );
+  const isCheckingRecords =
+    isBookingsLoading || (!bookings.length && isYclientsRecordsStatusLoading);
   const recordDate = latestRecord?.date ?? '';
   const recordTime = latestRecord?.time ?? '';
   const recordServiceTitle = latestRecord?.service?.title || 'Запись';
@@ -79,6 +103,33 @@ export function AtlazerPage() {
   const referralLink = profile?.referral_code
     ? `https://t.me/etlazer_bot?start=tg_${profile.referral_code}`
     : null;
+  const storedCompanyId = slug ? getStoredMiniappCompanyId(slug) : undefined;
+  const bookingStartPath = storedCompanyId
+    ? `${getMiniappBasePath(slug, storedCompanyId)}/datetime`
+    : `${basePath}/branch`;
+  const managerUrl = 'https://t.me/etlaser_admin';
+
+  const openManagerChat = () => {
+    if (openTelegramLink) {
+      openTelegramLink(managerUrl);
+      return;
+    }
+
+    window.open(managerUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleBookingClick = () => {
+    if (isCheckingRecords) {
+      return;
+    }
+
+    if (hasAnyRecord) {
+      setRepeatBookingOpen(true);
+      return;
+    }
+
+    navigate(bookingStartPath);
+  };
 
   const shareReferralLink = async () => {
     if (!referralLink) return;
@@ -208,9 +259,7 @@ export function AtlazerPage() {
           </div>
         </div>
         <div ref={buttonsBlockRef} className="pt-3 pb-6">
-          <ButtonBox onClick={() => navigate(`${basePath}/branch`)}>
-            Записаться
-          </ButtonBox>
+          <ButtonBox onClick={handleBookingClick}>Записаться</ButtonBox>
         </div>
         <div>
           <p className="text-xl font-medium pt-3">Записи</p>
@@ -307,7 +356,7 @@ export function AtlazerPage() {
           telegram={primaryIntegration?.telegram}
           website={primaryIntegration?.website}
         />
-        <div className="mt-8">
+        <div className="mt-8 pb-24">
           <p className="text-xl font-medium pt-3">Фотографии</p>
           {isLoading ? (
             <div className="pt-4 flex gap-3">
@@ -369,30 +418,33 @@ export function AtlazerPage() {
                 ))}
               </div>
             ) : reviews.length ? (
-              reviews.map(review => (
-                <div key={review.id} className="mb-8">
-                  <div className="flex gap-3">
-                    {review.author_photo?.url ? (
-                      <img
-                        src={review.author_photo.url}
-                        className="w-11 h-11 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-11 h-11 bg-black rounded-full"></div>
-                    )}
-                    <div className="flex flex-col">
-                      <p>{review.author}</p>
-                      <p className="flex opacity-40 items-center gap-1 text-sm font-bold">
-                        <StarIcon className="w-3 h-3 fill-black" />{' '}
-                        {review.rating}
-                      </p>
+              <>
+                <ReviewsYclientsCompany slug={slug} companyId={companyId} />
+                {reviews.map(review => (
+                  <div key={review.id} className="mb-8">
+                    <div className="flex gap-3">
+                      {review.author_photo?.url ? (
+                        <img
+                          src={review.author_photo.url}
+                          className="w-11 h-11 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 bg-black rounded-full"></div>
+                      )}
+                      <div className="flex flex-col">
+                        <p>{review.author}</p>
+                        <p className="flex opacity-40 items-center gap-1 text-sm font-bold">
+                          <StarIcon className="w-3 h-3 fill-black" />{' '}
+                          {review.rating}
+                        </p>
+                      </div>
                     </div>
+                    <p className="mt-2">{review.text}</p>
                   </div>
-                  <p className="mt-2">{review.text}</p>
-                </div>
-              ))
+                ))}
+              </>
             ) : (
-              <div className="text-sm text-black/40">Пока нет отзывов</div>
+              <ReviewsYclientsCompany slug={slug} companyId={companyId} />
             )}
           </div>
         </div>
@@ -432,13 +484,43 @@ export function AtlazerPage() {
                     ? 'opacity-100 scale-x-100 max-w-[240px]'
                     : 'opacity-0 scale-x-0 max-w-0'
                 }`}
-                onClick={() => navigate(`${basePath}/branch`)}
+                onClick={handleBookingClick}
               >
                 Записаться
               </Button>
             </div>
           </div>
         </FixedActionBar>
+
+        <Sheet open={repeatBookingOpen} onOpenChange={setRepeatBookingOpen}>
+          <SheetContent side="bottom">
+            <SheetTitle className="text-2xl font-bold">
+              Повторная запись
+            </SheetTitle>
+            <SheetDescription className="text-black/60 mt-2 text-center">
+              Запись на повторные процедуры доступны через менеджера{' '}
+              <button
+                type="button"
+                className="font-medium text-blue-600"
+                onClick={openManagerChat}
+              >
+                @etlaser_admin
+              </button>
+            </SheetDescription>
+            <SheetFooter className="mt-6">
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
+                rounded="full"
+                className="w-full"
+                onClick={openManagerChat}
+              >
+                Написать менеджеру
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
       </Page.Content>
     </Page>
   );

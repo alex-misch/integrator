@@ -189,6 +189,24 @@ export type DeleteUserRecordResponse = YclientsSuccessResponse<
   MetaEmptyArray | MetaEmptyObject
 >;
 
+// /api/v1/comments/{company_id}/
+export interface CompanyComment {
+  id: number;
+  salon_id: number;
+  type: 0 | 1;
+  master_id: number;
+  text: string;
+  date: string | number;
+  rating: string;
+  user_name: string;
+  user_avatar: string;
+}
+
+export type CompanyCommentsResponse = YclientsSuccessResponse<
+  CompanyComment[],
+  MetaEmptyArray | MetaEmptyObject
+>;
+
 // --- COMPANIES ---
 // /api/v1/companies
 export interface CompanyListItem {

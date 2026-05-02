@@ -15,6 +15,8 @@ import {MiniappService as MiniappDomainService} from 'src/modules/miniapp/miniap
 import {
   MiniappPublicDto,
   MiniappPublicIntegrationDto,
+  MiniappYclientsCommentDto,
+  MiniappYclientsRecordsStatusDto,
   MiniappPublicServiceDto,
   MiniappPublicSpecialistDto,
   MiniappTimeslotDto,
@@ -385,6 +387,87 @@ export class MiniappsPublicController {
       specialist: booking.specialist
         ? (booking.specialist as MiniappPublicSpecialistDto)
         : null,
+    }));
+  }
+
+  @Get(':slug/:companyId/yclients-records-status')
+  @ApiOperation({summary: 'Miniapp YCLIENTS records status'})
+  @ApiOkResponse({type: MiniappYclientsRecordsStatusDto})
+  @UseTelegramGuard()
+  async yclientsRecordsStatus(
+    @Param('slug') slug: string,
+    @Param('companyId') companyId: string,
+    @Req() request,
+  ): Promise<MiniappYclientsRecordsStatusDto> {
+    const miniapp = await this.miniapps.findBySlug(slug);
+    if (!miniapp) {
+      throw new NotFoundException(`Miniapp ${slug} not found`);
+    }
+    const companyIdNumber = Number(companyId);
+    if (!companyIdNumber || Number.isNaN(companyIdNumber)) {
+      throw new BadRequestException('companyId is required');
+    }
+    const selectedIntegration = await this.miniapps.findIntegrationByCompanyId(
+      miniapp.id,
+      companyIdNumber,
+    );
+    if (!selectedIntegration?.company_id) {
+      throw new NotFoundException(`Integration ${companyId} not found`);
+    }
+
+    const customer = await this.getCustomerFromRequest(request);
+    const yclientsClientId = await this.resolveCustomerYclientsId(
+      selectedIntegration.company_id,
+      customer,
+    );
+
+    if (!yclientsClientId) {
+      return {has_records: false};
+    }
+
+    const records = await this.yclients.recordsByClient({
+      companyId: selectedIntegration.company_id,
+      clientId: yclientsClientId,
+    });
+
+    return {has_records: records.length > 0};
+  }
+
+  @Get(':slug/:companyId/yclients-comments')
+  @ApiOperation({summary: 'Miniapp YCLIENTS company comments'})
+  @ApiOkResponse({type: MiniappYclientsCommentDto, isArray: true})
+  async yclientsComments(
+    @Param('slug') slug: string,
+    @Param('companyId') companyId: string,
+  ): Promise<MiniappYclientsCommentDto[]> {
+    const miniapp = await this.miniapps.findBySlug(slug);
+    if (!miniapp) {
+      throw new NotFoundException(`Miniapp ${slug} not found`);
+    }
+    const companyIdNumber = Number(companyId);
+    if (!companyIdNumber || Number.isNaN(companyIdNumber)) {
+      throw new BadRequestException('companyId is required');
+    }
+    const selectedIntegration = await this.miniapps.findIntegrationByCompanyId(
+      miniapp.id,
+      companyIdNumber,
+    );
+    if (!selectedIntegration?.company_id) {
+      throw new NotFoundException(`Integration ${companyId} not found`);
+    }
+
+    const comments = await this.yclients.companyComments(
+      selectedIntegration.company_id,
+      {page: 1, count: 10},
+    );
+
+    return comments.slice(0, 10).map(comment => ({
+      id: comment.id,
+      text: comment.text,
+      rating: Number(comment.rating) || 0,
+      author: comment.user_name,
+      author_avatar: comment.user_avatar || null,
+      date: String(comment.date),
     }));
   }
 
@@ -783,6 +866,33 @@ export class MiniappsPublicController {
       2,
       '0',
     )}:${seconds.padStart(2, '0')}`;
+  }
+
+  private async resolveCustomerYclientsId(
+    companyId: number,
+    customer: TelegramCustomer,
+  ) {
+    if (customer.yclients_id) {
+      return customer.yclients_id;
+    }
+
+    const phone = normalizePhone(customer.phone ?? null);
+    if (!phone) {
+      return null;
+    }
+
+    const clients = await this.yclients.searchClientsByPhone(companyId, phone);
+    const matchedClient = clients[0];
+    if (!matchedClient?.id) {
+      return null;
+    }
+
+    await this.customerService.update(customer.id, {
+      yclients_id: matchedClient.id,
+    });
+    customer.yclients_id = matchedClient.id;
+
+    return matchedClient.id;
   }
 
   private getDefaultBookingSelection(companyId: number) {

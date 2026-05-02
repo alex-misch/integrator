@@ -58,6 +58,20 @@ export interface MiniappCreateRecordDto {
   time: string;
 }
 
+export interface MiniappYclientsCommentDto {
+  author: string;
+  /** @nullable */
+  author_avatar: string | null;
+  date: string;
+  id: number;
+  rating: number;
+  text: string;
+}
+
+export interface MiniappYclientsRecordsStatusDto {
+  has_records: boolean;
+}
+
 export type MiniappPublicBookingDtoStatus =
   (typeof MiniappPublicBookingDtoStatus)[keyof typeof MiniappPublicBookingDtoStatus];
 

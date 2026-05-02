@@ -1,4 +1,4 @@
-import {ApiProperty, PickType} from '@nestjs/swagger';
+import {ApiProperty, ApiPropertyOptional, PickType} from '@nestjs/swagger';
 import {DBFile} from '../../../../modules/files/files.entity';
 import {Miniapp} from '../../../../modules/miniapp/miniapp.entity';
 import {MiniappReview} from '../../../../modules/miniapp/miniapp-review.entity';
@@ -45,6 +45,31 @@ export class MiniappPublicReviewDto extends PickType(MiniappReview, [
   'author',
   'author_photo',
 ]) {}
+
+export class MiniappYclientsCommentDto {
+  @ApiProperty({example: 123})
+  id: number;
+
+  @ApiProperty({example: 'Очень понравилось'})
+  text: string;
+
+  @ApiProperty({example: 5})
+  rating: number;
+
+  @ApiProperty({example: 'Анна'})
+  author: string;
+
+  @ApiPropertyOptional({example: 'https://example.com/avatar.jpg'})
+  author_avatar: string | null;
+
+  @ApiProperty({example: '2026-05-01'})
+  date: string;
+}
+
+export class MiniappYclientsRecordsStatusDto {
+  @ApiProperty({example: true})
+  has_records: boolean;
+}
 
 export class MiniappPublicDto extends PickType(Miniapp, [
   'id',

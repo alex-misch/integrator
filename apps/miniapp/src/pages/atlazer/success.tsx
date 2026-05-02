@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
 import {X} from 'lucide-react';
 import {
@@ -9,6 +9,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import {Page} from '@/components/Layout/Page.tsx';
+import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
 import {Badge} from '@/components/ui/badge';
 import {Skeleton} from '@/components/ui/skeleton';
@@ -54,6 +55,9 @@ export function AtlazerSuccessPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const {slug, companyId} = useMiniappParams();
   const basePath = getMiniappBasePath(slug, companyId);
+  const goHome = useCallback(() => {
+    navigate(basePath, {replace: true});
+  }, [basePath, navigate]);
   const {data: miniapp} = useMiniappsPublicControllerBySlug(slug, companyId, {
     query: {enabled: !!(slug && companyId)},
   });
@@ -67,8 +71,8 @@ export function AtlazerSuccessPage() {
   const cancelBooking = useMiniappsPublicControllerCancelBooking();
 
   useEffect(() => {
-    if (isBookingNotFound) navigate(getMiniappBasePath(slug, companyId));
-  }, [isBookingNotFound]);
+    if (isBookingNotFound) goHome();
+  }, [goHome, isBookingNotFound]);
 
   const service = booking?.service ?? null;
   const specialist = booking?.specialist ?? null;
@@ -84,7 +88,7 @@ export function AtlazerSuccessPage() {
   const isLoading = isBookingLoading;
 
   return (
-    <Page back>
+    <Page back onBack={goHome}>
       <Page.Title>
         <div className="pt-3">
           {isLoading ? (
@@ -212,6 +216,17 @@ export function AtlazerSuccessPage() {
           telegram={primaryIntegration?.telegram}
           website={primaryIntegration?.website}
         />
+        <FixedActionBar>
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            className="w-full py-4"
+            onClick={goHome}
+          >
+            На главную
+          </Button>
+        </FixedActionBar>
       </Page.Content>
 
       <Sheet open={cancelOpen} onOpenChange={setCancelOpen}>
@@ -236,7 +251,7 @@ export function AtlazerSuccessPage() {
                   bookingId,
                 });
                 setCancelOpen(false);
-                navigate(basePath);
+                goHome();
               }}
             >
               Отменить запись

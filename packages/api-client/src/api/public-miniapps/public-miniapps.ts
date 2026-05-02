@@ -27,6 +27,8 @@ import type {
   MiniappPublicSpecialistDto,
   MiniappTimeslotDto,
   MiniappUpdateBookingDto,
+  MiniappYclientsCommentDto,
+  MiniappYclientsRecordsStatusDto,
   MiniappsPublicControllerBookDatesParams,
   MiniappsPublicControllerRecordsParams,
   MiniappsPublicControllerServicesParams,
@@ -1045,6 +1047,362 @@ export function useMiniappsPublicControllerBookings<
   },
 ): UseQueryResult<TData, TError> & {queryKey: QueryKey} {
   const queryOptions = getMiniappsPublicControllerBookingsQueryOptions(
+    slug,
+    companyId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * @summary Miniapp YCLIENTS records status
+ */
+export const miniappsPublicControllerYclientsRecordsStatus = (
+  slug: string,
+  companyId: string,
+) => {
+  return customFetch<MiniappYclientsRecordsStatusDto>({
+    url: `/api/public/miniapps/${slug}/${companyId}/yclients-records-status`,
+    method: 'GET',
+  });
+};
+
+export const getMiniappsPublicControllerYclientsRecordsStatusQueryKey = (
+  slug: string,
+  companyId: string,
+) => {
+  return [
+    `/api/public/miniapps/${slug}/${companyId}/yclients-records-status`,
+  ] as const;
+};
+
+export const getMiniappsPublicControllerYclientsRecordsStatusQueryOptions = <
+  TData = Awaited<
+    ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+  >,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+        >,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const {query: queryOptions} = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getMiniappsPublicControllerYclientsRecordsStatusQueryKey(slug, companyId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>>
+  > = () => miniappsPublicControllerYclientsRecordsStatus(slug, companyId);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(slug && companyId),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>>,
+    TError,
+    TData
+  > & {queryKey: QueryKey};
+};
+
+export type MiniappsPublicControllerYclientsRecordsStatusQueryResult =
+  NonNullable<
+    Awaited<ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>>
+  >;
+export type MiniappsPublicControllerYclientsRecordsStatusQueryError =
+  ErrorType<unknown>;
+
+export function useMiniappsPublicControllerYclientsRecordsStatus<
+  TData = Awaited<
+    ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+  >,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+          >,
+          TError,
+          TData
+        >,
+        'initialData'
+      >;
+  },
+): DefinedUseQueryResult<TData, TError> & {queryKey: QueryKey};
+export function useMiniappsPublicControllerYclientsRecordsStatus<
+  TData = Awaited<
+    ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+  >,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+        >,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<
+            ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+          >,
+          TError,
+          TData
+        >,
+        'initialData'
+      >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey};
+export function useMiniappsPublicControllerYclientsRecordsStatus<
+  TData = Awaited<
+    ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+  >,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+        >,
+        TError,
+        TData
+      >
+    >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey};
+/**
+ * @summary Miniapp YCLIENTS records status
+ */
+
+export function useMiniappsPublicControllerYclientsRecordsStatus<
+  TData = Awaited<
+    ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+  >,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<
+          ReturnType<typeof miniappsPublicControllerYclientsRecordsStatus>
+        >,
+        TError,
+        TData
+      >
+    >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey} {
+  const queryOptions =
+    getMiniappsPublicControllerYclientsRecordsStatusQueryOptions(
+      slug,
+      companyId,
+      options,
+    );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  query.queryKey = queryOptions.queryKey;
+
+  return query;
+}
+
+/**
+ * @summary Miniapp YCLIENTS company comments
+ */
+export const miniappsPublicControllerYclientsComments = (
+  slug: string,
+  companyId: string,
+) => {
+  return customFetch<MiniappYclientsCommentDto[]>({
+    url: `/api/public/miniapps/${slug}/${companyId}/yclients-comments`,
+    method: 'GET',
+  });
+};
+
+export const getMiniappsPublicControllerYclientsCommentsQueryKey = (
+  slug: string,
+  companyId: string,
+) => {
+  return [
+    `/api/public/miniapps/${slug}/${companyId}/yclients-comments`,
+  ] as const;
+};
+
+export const getMiniappsPublicControllerYclientsCommentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
+  const {query: queryOptions} = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getMiniappsPublicControllerYclientsCommentsQueryKey(slug, companyId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>
+  > = () => miniappsPublicControllerYclientsComments(slug, companyId);
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!(slug && companyId),
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+    TError,
+    TData
+  > & {queryKey: QueryKey};
+};
+
+export type MiniappsPublicControllerYclientsCommentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>
+>;
+export type MiniappsPublicControllerYclientsCommentsQueryError =
+  ErrorType<unknown>;
+
+export function useMiniappsPublicControllerYclientsComments<
+  TData = Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+          TError,
+          TData
+        >,
+        'initialData'
+      >;
+  },
+): DefinedUseQueryResult<TData, TError> & {queryKey: QueryKey};
+export function useMiniappsPublicControllerYclientsComments<
+  TData = Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+          TError,
+          TData
+        >,
+        'initialData'
+      >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey};
+export function useMiniappsPublicControllerYclientsComments<
+  TData = Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+        TError,
+        TData
+      >
+    >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey};
+/**
+ * @summary Miniapp YCLIENTS company comments
+ */
+
+export function useMiniappsPublicControllerYclientsComments<
+  TData = Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+  TError = ErrorType<unknown>,
+>(
+  slug: string,
+  companyId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof miniappsPublicControllerYclientsComments>>,
+        TError,
+        TData
+      >
+    >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey} {
+  const queryOptions = getMiniappsPublicControllerYclientsCommentsQueryOptions(
     slug,
     companyId,
     options,
