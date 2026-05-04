@@ -44,33 +44,43 @@ export function AtlazerPage() {
   const [repeatBookingOpen, setRepeatBookingOpen] = useState(false);
   const photosTrackWidth = 40;
   const {slug, companyId} = useMiniappParams();
-  const basePath = getMiniappBasePath(slug, companyId);
+  const storedCompanyId = slug ? getStoredMiniappCompanyId(slug) : undefined;
+  const effectiveCompanyId = storedCompanyId || companyId;
+  const basePath = getMiniappBasePath(slug, effectiveCompanyId);
   const {data: miniapp, isLoading: isMiniappLoading} =
-    useMiniappsPublicControllerBySlug(slug, companyId, {
-      query: {enabled: !!(slug && companyId)},
+    useMiniappsPublicControllerBySlug(slug, effectiveCompanyId, {
+      query: {enabled: !!(slug && effectiveCompanyId)},
     });
   const {data: bookings = [], isLoading: isBookingsLoading} =
-    useMiniappsPublicControllerBookings(slug, companyId, {
-      query: {enabled: !!(slug && companyId)},
+    useMiniappsPublicControllerBookings(slug, effectiveCompanyId, {
+      query: {enabled: !!(slug && effectiveCompanyId)},
     });
   const {
     data: yclientsRecordsStatus,
     isLoading: isYclientsRecordsStatusLoading,
-  } = useMiniappsPublicControllerYclientsRecordsStatus(slug, companyId, {
-    query: {
-      enabled: !!(slug && companyId) && !isBookingsLoading && !bookings.length,
+  } = useMiniappsPublicControllerYclientsRecordsStatus(
+    slug,
+    effectiveCompanyId,
+    {
+      query: {
+        enabled:
+          !!(slug && effectiveCompanyId) &&
+          !isBookingsLoading &&
+          !bookings.length,
+      },
     },
-  });
+  );
   const {data: profile} = useCustomerPublicControllerProfile();
   const primaryIntegration = miniapp?.integration ?? null;
   const companies = miniapp?.companies ?? [];
   const selectedCompany =
-    companies.find(item => String(item.id) === companyId) ?? companies[0];
+    companies.find(item => String(item.id) === effectiveCompanyId) ??
+    companies[0];
   const primaryCompanyId =
     companies.find(company => company.is_primary)?.id ??
     primaryIntegration?.company_id ??
     selectedCompany?.id ??
-    companyId;
+    effectiveCompanyId;
   const title =
     miniapp?.public_title || miniapp?.title || miniapp?.name || 'Miniapp';
   const cityLabel =
@@ -103,7 +113,6 @@ export function AtlazerPage() {
   const referralLink = profile?.referral_code
     ? `https://t.me/etlazer_bot?start=tg_${profile.referral_code}`
     : null;
-  const storedCompanyId = slug ? getStoredMiniappCompanyId(slug) : undefined;
   const bookingStartPath = storedCompanyId
     ? `${getMiniappBasePath(slug, storedCompanyId)}/datetime`
     : `${basePath}/branch`;
@@ -191,12 +200,17 @@ export function AtlazerPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (storedCompanyId && companyId !== storedCompanyId && slug) {
+      navigate(getMiniappBasePath(slug, storedCompanyId), {replace: true});
+      return;
+    }
+
     if (!companyId && selectedCompany?.id && slug) {
       navigate(getMiniappBasePath(slug, String(selectedCompany.id)), {
         replace: true,
       });
     }
-  }, [companyId, navigate, selectedCompany?.id, slug]);
+  }, [companyId, navigate, selectedCompany?.id, slug, storedCompanyId]);
 
   return (
     <Page back={false}>
@@ -419,7 +433,10 @@ export function AtlazerPage() {
               </div>
             ) : reviews.length ? (
               <>
-                <ReviewsYclientsCompany slug={slug} companyId={companyId} />
+                <ReviewsYclientsCompany
+                  slug={slug}
+                  companyId={effectiveCompanyId}
+                />
                 {reviews.map(review => (
                   <div key={review.id} className="mb-8">
                     <div className="flex gap-3">
@@ -444,7 +461,10 @@ export function AtlazerPage() {
                 ))}
               </>
             ) : (
-              <ReviewsYclientsCompany slug={slug} companyId={companyId} />
+              <ReviewsYclientsCompany
+                slug={slug}
+                companyId={effectiveCompanyId}
+              />
             )}
           </div>
         </div>
