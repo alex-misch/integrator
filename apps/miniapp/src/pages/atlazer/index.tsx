@@ -555,7 +555,7 @@ function WalletCard({companyId}: {companyId?: number | string}) {
                 <p className="text-xs uppercase text-white/50">
                   Карта лояльности
                 </p>
-                <p className="mt-1 text-lg font-medium">ET Lazer</p>
+                <p className="mt-1 text-lg font-medium">ET LASER</p>
               </div>
               <div className="flex items-end justify-between gap-3">
                 <div className="min-w-0">
