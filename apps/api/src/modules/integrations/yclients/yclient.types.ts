@@ -311,6 +311,7 @@ export interface RecordsListItem {
   id: number;
   company_id: number;
   staff_id: number;
+  deleted: boolean;
   services: Array<{
     id: number;
     title: string;

@@ -428,6 +428,7 @@ export class MiniappsPublicController {
     const records = await this.yclients.recordsByClient({
       companyId: selectedIntegration.company_id,
       clientId: yclientsClientId,
+      withDeleted: false,
     });
 
     return {has_records: records.length > 0};

@@ -364,6 +364,7 @@ export class YclientsClient {
     clientId?: number;
     startDate?: IsoDate;
     endDate?: IsoDate;
+    withDeleted?: boolean;
   }): Promise<RecordsResponse['data']> {
     const {companyId, clientId, startDate, endDate} = params;
 
@@ -375,6 +376,7 @@ export class YclientsClient {
         client_id: clientId,
         start_date: startDate,
         end_date: endDate,
+        with_deleted: params.withDeleted ? 1 : 0,
       },
     });
 
