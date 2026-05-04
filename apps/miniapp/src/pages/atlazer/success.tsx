@@ -247,11 +247,19 @@ export function AtlazerSuccessPage() {
               disabled={!bookingId || cancelBooking.isPending}
               onClick={async () => {
                 if (!bookingId) return;
-                await cancelBooking.mutateAsync({
-                  slug,
-                  companyId,
-                  bookingId,
-                });
+                await cancelBooking.mutateAsync(
+                  {
+                    slug,
+                    companyId,
+                    bookingId,
+                  },
+                  {
+                    onError: () =>
+                      alert(
+                        'Ошибка отмены записи, пожалуйста, напишите администратору',
+                      ),
+                  },
+                );
                 setCancelOpen(false);
                 goHome();
               }}
@@ -264,6 +272,7 @@ export function AtlazerSuccessPage() {
               size="lg"
               rounded="full"
               className="w-1/2"
+              disabled={cancelBooking.isPending}
               onClick={() => setCancelOpen(false)}
             >
               Закрыть

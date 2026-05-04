@@ -201,6 +201,7 @@ export function AtlazerBookingPage() {
               variant="primary"
               size="lg"
               className="w-full py-4"
+              disabled={createRecord.isPending}
             >
               Записаться
             </Button>
