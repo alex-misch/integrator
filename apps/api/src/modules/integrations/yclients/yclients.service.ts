@@ -318,13 +318,12 @@ export class YclientsClient {
     companyId: number,
     recordId: number,
   ): Promise<DeleteRecordResponse['data']> {
-    const r = await this.request<
+    await this.request<
       DeleteRecordResponse['data'],
       DeleteRecordResponse['meta']
     >('DELETE', `/api/v1/record/${companyId}/${recordId}`);
 
-    console.log('GOT', r);
-    return this.unwrap(r, 'deleteRecord').data;
+    return true;
   }
 
   async companyComments(
