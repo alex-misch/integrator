@@ -323,6 +323,7 @@ export class YclientsClient {
       DeleteRecordResponse['meta']
     >('DELETE', `/api/v1/record/${companyId}/${recordId}`);
 
+    console.log('GOT', r);
     return this.unwrap(r, 'deleteRecord').data;
   }
 
