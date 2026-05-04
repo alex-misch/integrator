@@ -197,7 +197,9 @@ export function AtlazerSuccessPage() {
               </div>
               <div className="bg-white py-3">
                 <div className="text-sm text-black/40">Дата и время</div>
-                <div className="text-black font-medium">{dateTimeLabel}</div>
+                <div className="text-black font-medium">
+                  {dateTimeLabel.split(':').slice(0, 2).join(':')}
+                </div>
               </div>
             </div>
           </>

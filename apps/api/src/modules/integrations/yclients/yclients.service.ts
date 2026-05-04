@@ -130,10 +130,11 @@ export class YclientsClient {
 
     // если API вернул не-2xx, но тело читаемое — пробрасываем как ошибку
     if (!res.ok) {
-      if (res.status === 403) throw new UnauthorizedException();
-      throw new Error(
+      console.error(
         `YCLIENTS ${method} ${path} ${JSON.stringify(opts)}\n HTTP ${res.status}: ${text}`,
       );
+      if (res.status === 403) throw new UnauthorizedException();
+      throw new Error(`${res.statusText}`);
     }
     return json;
   }
