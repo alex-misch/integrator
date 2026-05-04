@@ -673,10 +673,17 @@ export class MiniappsPublicController {
     }
 
     if (booking.yclients_record_id && booking.yclients_record_hash) {
-      await this.yclients.deleteUserRecord(
-        booking.yclients_record_id,
-        booking.yclients_record_hash,
-      );
+      try {
+        await this.yclients.deleteUserRecord(
+          booking.yclients_record_id,
+          booking.yclients_record_hash,
+        );
+      } catch {
+        await this.yclients.deleteRecord(
+          companyIdNumber,
+          booking.yclients_record_id,
+        );
+      }
     }
 
     const updated = await this.miniapps.cancelBooking(booking);

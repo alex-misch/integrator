@@ -189,6 +189,11 @@ export type DeleteUserRecordResponse = YclientsSuccessResponse<
   MetaEmptyArray | MetaEmptyObject
 >;
 
+export type DeleteRecordResponse = YclientsSuccessResponse<
+  unknown,
+  MetaEmptyArray | MetaEmptyObject
+>;
+
 // /api/v1/comments/{company_id}/
 export interface CompanyComment {
   id: number;

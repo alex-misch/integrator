@@ -23,6 +23,7 @@ import type {
   LoyaltyCardTypesResponse,
   ClientSearchResponse,
   ClientResponse,
+  DeleteRecordResponse,
 } from './yclient.types';
 import {ConfigService} from '@nestjs/config';
 
@@ -311,6 +312,18 @@ export class YclientsClient {
     });
 
     return this.unwrap(r, 'deleteUserRecord').data;
+  }
+
+  async deleteRecord(
+    companyId: number,
+    recordId: number,
+  ): Promise<DeleteRecordResponse['data']> {
+    const r = await this.request<
+      DeleteRecordResponse['data'],
+      DeleteRecordResponse['meta']
+    >('DELETE', `/api/v1/record/${companyId}/${recordId}`);
+
+    return this.unwrap(r, 'deleteRecord').data;
   }
 
   async companyComments(
