@@ -695,10 +695,12 @@ export class MiniappsPublicController {
   @Get(':slug/:companyId/booking/:bookingId')
   @ApiOperation({summary: 'Get miniapp booking'})
   @ApiOkResponse({type: MiniappPublicBookingDto})
+  @UseTelegramGuard()
   async bookingById(
     @Param('slug') slug: string,
     @Param('companyId') companyId: string,
     @Param('bookingId') bookingId: string,
+    @Req() request,
   ): Promise<MiniappPublicBookingDto> {
     const miniapp = await this.miniapps.findBySlug(slug);
     if (!miniapp) {
@@ -727,6 +729,12 @@ export class MiniappsPublicController {
       throw new NotFoundException(`Booking ${bookingId} not found`);
     }
     if (booking.service?.integration?.id !== selectedIntegration.id) {
+      throw new NotFoundException(`Booking ${bookingId} not found`);
+    }
+    const customer =
+      (request?.customer as TelegramCustomer | undefined) ??
+      (await this.getCustomerFromRequest(request));
+    if (booking.customer?.id !== customer.id) {
       throw new NotFoundException(`Booking ${bookingId} not found`);
     }
 
