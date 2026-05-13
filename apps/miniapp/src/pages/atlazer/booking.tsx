@@ -6,7 +6,10 @@ import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
 import {FloatingLabelInput} from '@/components/ui/input';
 import {PhoneInput} from '@/components/ui/phone-input';
-import {useMiniappsPublicControllerCreateRecord} from '@integrator/api-client/public';
+import {
+  useCustomerPublicControllerProfile,
+  useMiniappsPublicControllerCreateRecord,
+} from '@integrator/api-client/public';
 import {getMiniappBasePath, useMiniappParams} from '@/lib/miniapp';
 import {
   buildBookingUrl,
@@ -45,6 +48,12 @@ const formatDateLabel = (value?: string | null) => {
   return `${day} ${monthNames[month - 1]}`;
 };
 
+const formatPhoneForInput = (value?: string | null) => {
+  if (!value) return '';
+  const digits = value.replace(/\D/g, '');
+  return digits ? `+${digits}` : '';
+};
+
 export function AtlazerBookingPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -54,6 +63,7 @@ export function AtlazerBookingPage() {
   const {slug, companyId} = useMiniappParams();
   const basePath = getMiniappBasePath(slug, companyId);
   const createRecord = useMiniappsPublicControllerCreateRecord();
+  const {data: profile} = useCustomerPublicControllerProfile();
 
   useEffect(() => {
     const nextRoute = getNextBookingRoute(bookingParams, basePath);
@@ -70,6 +80,8 @@ export function AtlazerBookingPage() {
     register,
     handleSubmit,
     control,
+    getValues,
+    setValue,
     formState: {errors},
   } = useForm<BookingFormValues>({
     defaultValues: {
@@ -79,6 +91,23 @@ export function AtlazerBookingPage() {
       consent: true,
     },
   });
+
+  useEffect(() => {
+    if (!profile) return;
+
+    const profileName = [profile.first_name, profile.last_name]
+      .map(part => part?.trim())
+      .filter(Boolean)
+      .join(' ');
+    const profilePhone = formatPhoneForInput(profile.phone);
+
+    if (profileName && !getValues('name')) {
+      setValue('name', profileName);
+    }
+    if (profilePhone && !getValues('phone')) {
+      setValue('phone', profilePhone);
+    }
+  }, [getValues, profile, setValue]);
 
   const onSubmit = async (values: BookingFormValues) => {
     if (!slug || !companyId || !dateValue || !timeValue) {
