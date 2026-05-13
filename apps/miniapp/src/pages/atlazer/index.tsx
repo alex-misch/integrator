@@ -605,7 +605,7 @@ export function AtlazerPage() {
             }
           }}
         >
-          <DialogContent className="h-dvh max-h-dvh w-screen max-w-none border-none bg-black p-0 text-white shadow-none sm:rounded-none [&>button]:right-4 [&>button]:top-4 [&>button]:z-[70] [&>button]:rounded-full [&>button]:bg-white/15 [&>button]:p-3 [&>button]:text-white [&>button]:opacity-100">
+          <DialogContent className="h-dvh max-h-dvh w-screen max-w-none border-none bg-black p-0 text-white shadow-none sm:rounded-none [&>button]:hidden">
             <DialogTitle className="sr-only">Фотографии</DialogTitle>
             <DialogDescription className="sr-only">
               Галерея фотографий с переключением свайпом влево и вправо
