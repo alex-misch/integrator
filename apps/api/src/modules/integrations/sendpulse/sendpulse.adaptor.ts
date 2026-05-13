@@ -36,10 +36,13 @@ export class SendpulseGetByTelegramIdResponse {
 }
 
 export class SendpulseApi {
-  private token: string;
+  private token: string | null = null;
   private readonly baseUrl = 'https://api.sendpulse.com';
+  private readonly clientId: string;
+  private readonly clientSecret: string;
   private readonly ready: Promise<void>;
   private readonly initTimeoutMs = 10_000;
+  private refreshTokenPromise: Promise<void> | null = null;
 
   constructor() {
     const clientId = process.env.SENDPULSE_CLIENT_ID;
@@ -51,7 +54,17 @@ export class SendpulseApi {
       );
     }
 
-    this.ready = new Promise((resolve, reject) => {
+    this.clientId = clientId;
+    this.clientSecret = clientSecret;
+    this.ready = this.refreshToken();
+  }
+
+  private refreshToken(): Promise<void> {
+    if (this.refreshTokenPromise) {
+      return this.refreshTokenPromise;
+    }
+
+    this.refreshTokenPromise = new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(
           new Error(
@@ -60,20 +73,31 @@ export class SendpulseApi {
         );
       }, this.initTimeoutMs);
 
-      sendpulse.init(clientId, clientSecret, process.env.TMPDIR, () => {
-        sendpulse.getToken(token => {
-          clearTimeout(timeout);
+      sendpulse.init(
+        this.clientId,
+        this.clientSecret,
+        process.env.TMPDIR,
+        () => {
+          sendpulse.getToken(token => {
+            clearTimeout(timeout);
 
-          if (!token) {
-            reject(new Error('[Sendpulse] token initialization failed'));
-            return;
-          }
+            if (!token) {
+              reject(new Error('[Sendpulse] token initialization failed'));
+              return;
+            }
 
-          this.token = token;
-          resolve();
-        });
-      });
+            this.token = token;
+            resolve();
+          });
+        },
+      );
     });
+
+    this.refreshTokenPromise = this.refreshTokenPromise.finally(() => {
+      this.refreshTokenPromise = null;
+    });
+
+    return this.refreshTokenPromise;
   }
 
   async getByTelegramId(
@@ -130,11 +154,13 @@ export class SendpulseApi {
   }): Promise<{ok: boolean; data?: T}> {
     let response: Response;
     try {
-      response = await fetch(`${this.baseUrl}${path}`, {
-        method,
-        headers: this.getAuthHeaders(),
-        body: body ? JSON.stringify(body) : undefined,
-      });
+      response = await this.fetchWithAuth({method, path, body});
+
+      if (response.status === 401) {
+        await this.refreshToken();
+        response = await this.fetchWithAuth({method, path, body});
+      }
+
       if (!response.ok) {
         console.error(`[Sendpulse] ${this.baseUrl} ${method} ${path} failed`, {
           status: response.status,
@@ -156,5 +182,21 @@ export class SendpulseApi {
       });
       return {ok: false};
     }
+  }
+
+  private fetchWithAuth({
+    method,
+    path,
+    body,
+  }: {
+    method: 'GET' | 'POST' | 'PATCH' | 'PUT';
+    path: string;
+    body?: unknown;
+  }) {
+    return fetch(`${this.baseUrl}${path}`, {
+      method,
+      headers: this.getAuthHeaders(),
+      body: body ? JSON.stringify(body) : undefined,
+    });
   }
 }

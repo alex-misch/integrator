@@ -4,6 +4,12 @@ import {FixedActionBar} from '@/components/Layout/FixedActionBar.tsx';
 import {Button} from '@/components/ui/button';
 import {Skeleton} from '@/components/ui/skeleton';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -11,9 +17,18 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import {LocationIcon, SelectArrowIcon} from '@/uikit/icons';
-import {ArrowUpRight, Share2, StarIcon} from 'lucide-react';
+import {
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Share2,
+  StarIcon,
+  X,
+} from 'lucide-react';
 import {PropsWithChildren, useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
+import {Swiper, SwiperSlide} from 'swiper/react';
+import type {Swiper as SwiperInstance} from 'swiper';
 import {OrgContacts} from '@/features/OrgContacts';
 import {cn} from '@/lib/utils';
 import {
@@ -31,15 +46,21 @@ import {
 } from '@/lib/miniapp';
 import {openTelegramLink, shareURL} from '@telegram-apps/sdk-react';
 import {ReviewsYclientsCompany} from './ReviewsYclientsCompany';
+import 'swiper/css';
 
 export function AtlazerPage() {
   const buttonsBlockRef = useRef<HTMLDivElement | null>(null);
   const photosScrollRef = useRef<HTMLDivElement | null>(null);
+  const gallerySwiperRef = useRef<SwiperInstance | null>(null);
   const [photosScroll, setPhotosScroll] = useState({
     thumbWidth: 0,
     thumbLeft: 0,
     isVisible: false,
   });
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(
+    null,
+  );
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [showBookingCta, setShowBookingCta] = useState(false);
   const [repeatBookingOpen, setRepeatBookingOpen] = useState(false);
   const photosTrackWidth = 40;
@@ -87,6 +108,26 @@ export function AtlazerPage() {
     primaryIntegration?.city || primaryIntegration?.address_text || 'Город';
   const addressLabel = primaryIntegration?.address_text || 'Адрес не указан';
   const photos = miniapp?.photos ?? [];
+  const galleryPhotos = useMemo(
+    () =>
+      photos.length
+        ? photos
+        : [
+            {
+              id: 'celeb_1',
+              url: '/assets/photos/etlaser1.jpeg',
+            },
+            {
+              id: 'celeb_2',
+              url: '/assets/photos/etlaser2.jpeg',
+            },
+            {
+              id: 'poster',
+              url: '/assets/photos/etlaser3.jpeg',
+            },
+          ],
+    [photos],
+  );
   const reviews = miniapp?.reviews ?? [];
   const latestRecord = bookings[0];
   const hasAnyRecord = Boolean(
@@ -318,18 +359,19 @@ export function AtlazerPage() {
             onClick={shareReferralLink}
           >
             <div className="p-5">
-              <div className="flex items-start justify-between gap-4">
+              <div className="relative">
                 <div>
                   <p className="text-sm font-medium text-blue-700/60">
                     Реферальная программа
                   </p>
                   <p className="mt-1 text-2xl font-medium">Пригласить друга</p>
                   <p className="mt-2 text-sm leading-snug text-blue-900/55">
-                    Вам - 5% от покупок друга <br />
-                    другу - 3000 приветственных бонусов
+                    Вам - 1000 рублей за друга
+                    <br />
+                    Другу - 3000 рублей на первую процедуру *
                   </p>
                 </div>
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-blue-600">
+                <div className="absolute top-0 right-0 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-blue-600">
                   <Share2 className="h-5 w-5" />
                 </div>
               </div>
@@ -354,6 +396,10 @@ export function AtlazerPage() {
                   <p className="mt-1 text-sm text-blue-700/60">с оплат</p>
                 </div>
               </div>
+              <p className="mt-2 text-xs leading-snug text-blue-900/55">
+                * Бонусы начисляются после оплаты друга, <br />
+                оплатить бонусами можно 50% покупки
+              </p>
             </div>
           </button>
         )}
@@ -389,15 +435,22 @@ export function AtlazerPage() {
                 onScroll={updatePhotosScroll}
               >
                 <div className="flex w-max gap-3 pr-4">
-                  {(photos.length
-                    ? photos
-                    : [{id: 'placeholder', url: '/assets/atlazer-img.png'}]
-                  ).map(photo => (
-                    <img
+                  {galleryPhotos.map((photo, index) => (
+                    <button
                       key={photo.id}
-                      src={photo.url}
-                      className="h-[200px] w-[200px] shrink-0 rounded-ui-l object-cover"
-                    />
+                      type="button"
+                      className="h-[200px] w-[200px] shrink-0 overflow-hidden rounded-ui-l"
+                      onClick={() => {
+                        setSelectedPhotoIndex(index);
+                        setGalleryOpen(true);
+                      }}
+                      aria-label={`Открыть фото ${index + 1}`}
+                    >
+                      <img
+                        src={photo.url}
+                        className="h-full w-full object-cover"
+                      />
+                    </button>
                   ))}
                 </div>
               </div>
@@ -541,6 +594,92 @@ export function AtlazerPage() {
             </SheetFooter>
           </SheetContent>
         </Sheet>
+
+        <Dialog
+          open={galleryOpen}
+          onOpenChange={open => {
+            setGalleryOpen(open);
+            if (!open) {
+              gallerySwiperRef.current = null;
+              setSelectedPhotoIndex(null);
+            }
+          }}
+        >
+          <DialogContent className="h-dvh max-h-dvh w-screen max-w-none border-none bg-black p-0 text-white shadow-none sm:rounded-none [&>button]:right-4 [&>button]:top-4 [&>button]:z-[70] [&>button]:rounded-full [&>button]:bg-white/15 [&>button]:p-3 [&>button]:text-white [&>button]:opacity-100">
+            <DialogTitle className="sr-only">Фотографии</DialogTitle>
+            <DialogDescription className="sr-only">
+              Галерея фотографий с переключением свайпом влево и вправо
+            </DialogDescription>
+            {selectedPhotoIndex !== null && (
+              <>
+                <div className="pointer-events-none absolute left-4 top-5 z-[60] rounded-full bg-white/15 px-3 py-1 text-sm font-medium text-white">
+                  {selectedPhotoIndex + 1} / {galleryPhotos.length}
+                </div>
+
+                <Swiper
+                  className="h-full w-full"
+                  initialSlide={selectedPhotoIndex}
+                  slidesPerView={1}
+                  spaceBetween={16}
+                  loop={galleryPhotos.length > 1}
+                  onSwiper={swiper => {
+                    gallerySwiperRef.current = swiper;
+                  }}
+                  onSlideChange={swiper => {
+                    if (galleryOpen) {
+                      setSelectedPhotoIndex(swiper.realIndex);
+                    }
+                  }}
+                >
+                  {galleryPhotos.map(photo => (
+                    <SwiperSlide key={photo.id}>
+                      <div className="flex h-dvh w-full items-center justify-center px-4 py-16">
+                        <img
+                          src={photo.url}
+                          className="max-h-full max-w-full rounded-ui-l object-contain"
+                        />
+                      </div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+
+                {galleryPhotos.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      className="absolute left-4 top-1/2 z-[60] hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm sm:flex"
+                      onClick={() => gallerySwiperRef.current?.slidePrev()}
+                      aria-label="Предыдущее фото"
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </button>
+                    <button
+                      type="button"
+                      className="absolute right-4 top-1/2 z-[60] hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm sm:flex"
+                      onClick={() => gallerySwiperRef.current?.slideNext()}
+                      aria-label="Следующее фото"
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </button>
+                  </>
+                )}
+
+                <div className="absolute inset-x-0 bottom-0 z-[60] px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-4">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    rounded="full"
+                    className="mx-auto flex bg-white text-black h-10"
+                    onClick={() => setGalleryOpen(false)}
+                  >
+                    <X className="h-5 w-5" />
+                    Закрыть
+                  </Button>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </Page.Content>
     </Page>
   );
