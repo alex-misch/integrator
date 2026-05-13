@@ -903,10 +903,7 @@ export class MiniappsPublicController {
       return null;
     }
 
-    await this.customerService.update(customer.id, {
-      yclients_id: matchedClient.id,
-    });
-    customer.yclients_id = matchedClient.id;
+    await this.customerService.syncFromYclientsClient(customer, matchedClient);
 
     return matchedClient.id;
   }

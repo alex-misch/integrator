@@ -52,6 +52,48 @@ export class TelegramCustomerService {
     return this.customer.update(id, data);
   }
 
+  async syncFromYclientsClient(
+    customer: TelegramCustomer,
+    yclientsClient?: {
+      id?: number | null;
+      name?: string | null;
+      surname?: string | null;
+      patronymic?: string | null;
+    } | null,
+  ) {
+    if (!yclientsClient?.id) {
+      return;
+    }
+
+    const [firstName, ...lastNameParts] = [
+      yclientsClient.name,
+      yclientsClient.surname,
+      yclientsClient.patronymic,
+    ]
+      .map(part => part?.trim())
+      .filter(Boolean);
+
+    const patch: DeepPartial<TelegramCustomer> = {};
+    if (customer.yclients_id !== yclientsClient.id) {
+      patch.yclients_id = yclientsClient.id;
+    }
+    if (firstName && customer.first_name !== firstName) {
+      patch.first_name = firstName;
+    }
+
+    const lastName = lastNameParts.join(' ') || null;
+    if (lastName && customer.last_name !== lastName) {
+      patch.last_name = lastName;
+    }
+
+    if (!Object.keys(patch).length) {
+      return;
+    }
+
+    await this.customer.update(customer.id, patch);
+    Object.assign(customer, patch);
+  }
+
   private parseInitData(initData: string) {
     try {
       return parse(decodeURIComponent(initData));

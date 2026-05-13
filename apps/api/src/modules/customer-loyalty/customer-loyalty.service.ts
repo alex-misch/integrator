@@ -142,11 +142,7 @@ export class CustomerLoyaltyService {
       phone,
     );
 
-    if (yclientsClient?.id && customer.yclients_id !== yclientsClient.id) {
-      await this.customers.update(customer.id, {
-        yclients_id: yclientsClient.id,
-      });
-    }
+    await this.customers.syncFromYclientsClient(customer, yclientsClient);
 
     const groupId =
       company.main_group_id ??
