@@ -19,10 +19,11 @@ type AccrueReferralPaymentBonusParams = {
   donor: TelegramCustomer;
   companyId: number;
   purchaseAmount: number;
-  rewardAmount: number;
   event: YclientsEvent;
   referredClient: SendpulseClient;
 };
+
+const REFERRAL_FIRST_PURCHASE_BONUS = 1000;
 
 @Injectable()
 export class CustomerLoyaltyService {
@@ -64,7 +65,6 @@ export class CustomerLoyaltyService {
     donor,
     companyId,
     purchaseAmount,
-    rewardAmount,
     event,
     referredClient,
   }: AccrueReferralPaymentBonusParams) {
@@ -78,13 +78,23 @@ export class CustomerLoyaltyService {
       return existingTransaction;
     }
 
+    const existingFirstPurchaseTransaction = await this.transactions.findOne({
+      where: {
+        source: 'referral_payment_bonus',
+        referred_client_record_id: referredClient.record_id,
+      },
+    });
+    if (existingFirstPurchaseTransaction) {
+      return existingFirstPurchaseTransaction;
+    }
+
     const context = await this.getWalletContext(donor.id, companyId);
-    const title = '5% по реферальной программе';
+    const title = '1000 ₽ за первую покупку реферала';
     const card = await this.yclients.loyaltyCardManualTransaction(
       companyId,
       context.card.id,
       {
-        amount: rewardAmount,
+        amount: REFERRAL_FIRST_PURCHASE_BONUS,
         title,
       },
     );
@@ -97,13 +107,14 @@ export class CustomerLoyaltyService {
         yclients_event_id: event.id,
         company_id: companyId,
         card_id: card.id,
-        amount: rewardAmount,
+        amount: REFERRAL_FIRST_PURCHASE_BONUS,
         purchase_amount: purchaseAmount,
         title,
         metadata: {
           event_name: event.event_name,
           referred_phone: referredClient.phone,
           tg_referrer: referredClient.tg_referrer,
+          bonus_policy: 'first_purchase_fixed_1000',
         },
       }),
     );

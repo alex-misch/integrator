@@ -15,6 +15,14 @@ const numberTransformer = {
   },
 };
 
+@Index(
+  'IDX_loyalty_transactions_referral_client_unique',
+  ['referred_client_record_id'],
+  {
+    unique: true,
+    where: `"referred_client_record_id" IS NOT NULL AND "source" = 'referral_payment_bonus' AND "metadata"->>'bonus_policy' = 'first_purchase_fixed_1000'`,
+  },
+)
 @Entity('loyalty_transactions')
 export class LoyaltyTransaction {
   @PrimaryGeneratedColumn({type: 'bigint'})

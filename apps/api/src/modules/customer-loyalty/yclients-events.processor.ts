@@ -83,18 +83,11 @@ export class YclientsEventsProcessor {
       return;
     }
 
-    const rewardAmount = this.roundMoney(event.amount * 0.05);
-    if (rewardAmount <= 0) {
-      await this.markProcessed(event, 'Referral reward amount is zero');
-      return;
-    }
-
     try {
       await this.loyalty.accrueReferralPaymentBonus({
         donor,
         companyId: event.company_id,
         purchaseAmount: event.amount,
-        rewardAmount,
         event,
         referredClient,
       });
@@ -121,9 +114,5 @@ export class YclientsEventsProcessor {
       processed: false,
       process_error: error,
     });
-  }
-
-  private roundMoney(value: number) {
-    return Math.round(value * 100) / 100;
   }
 }
