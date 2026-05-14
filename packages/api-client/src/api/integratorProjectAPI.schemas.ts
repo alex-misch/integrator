@@ -29,6 +29,36 @@ export type MiniappsPublicControllerServicesParams = {
   specialistId: string;
 };
 
+export type DashboardAdminControllerListCountersPeriod =
+  (typeof DashboardAdminControllerListCountersPeriod)[keyof typeof DashboardAdminControllerListCountersPeriod];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const DashboardAdminControllerListCountersPeriod = {
+  '7d': '7d',
+  '30d': '30d',
+  '3m': '3m',
+} as const;
+
+export type DashboardAdminControllerListCountersParams = {
+  period?: DashboardAdminControllerListCountersPeriod;
+};
+
+export type AnalyticsEventDtoMetadata = {[key: string]: unknown};
+
+export type AnalyticsEventDtoEventName =
+  (typeof AnalyticsEventDtoEventName)[keyof typeof AnalyticsEventDtoEventName];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const AnalyticsEventDtoEventName = {
+  referral_share: 'referral_share',
+} as const;
+
+export interface AnalyticsEventDto {
+  event_name: AnalyticsEventDtoEventName;
+  metadata?: AnalyticsEventDtoMetadata;
+  miniapp_slug?: string;
+}
+
 export interface WalletBalanceResponseDto {
   balance: number;
   card_id: number;
@@ -60,8 +90,7 @@ export interface MiniappCreateRecordDto {
 
 export interface MiniappYclientsCommentDto {
   author: string;
-  /** @nullable */
-  author_avatar: string | null;
+  author_avatar?: string;
   date: string;
   id: number;
   rating: number;
@@ -195,6 +224,23 @@ export interface MiniappPublicCompanyDto {
   title: string;
 }
 
+/**
+ * @nullable
+ */
+export type MiniappPublicReviewDtoAuthorPhoto = DBFile | null;
+
+export interface MiniappPublicReviewDto {
+  /** Author */
+  author: string;
+  /** @nullable */
+  author_photo: MiniappPublicReviewDtoAuthorPhoto;
+  id: number;
+  /** Rating */
+  rating: number;
+  /** Review text */
+  text: string;
+}
+
 export interface MiniappPublicDto {
   companies: MiniappPublicCompanyDto[];
   /** @nullable */
@@ -217,23 +263,6 @@ export interface MiniappPublicDto {
   slug: string;
   /** @nullable */
   title: string | null;
-}
-
-/**
- * @nullable
- */
-export type MiniappPublicReviewDtoAuthorPhoto = DBFile | null;
-
-export interface MiniappPublicReviewDto {
-  /** Author */
-  author: string;
-  /** @nullable */
-  author_photo: MiniappPublicReviewDtoAuthorPhoto;
-  id: number;
-  /** Rating */
-  rating: number;
-  /** Review text */
-  text: string;
 }
 
 export interface VerifyCustomerDto {
@@ -498,6 +527,46 @@ export interface MiniappListItemDto {
   photos: DBFile[];
   /** @nullable */
   slug: string | null;
+}
+
+export type DashboardCountersResponseTotals = {[key: string]: unknown};
+
+export type DashboardCountersResponseRange = {[key: string]: unknown};
+
+export type DashboardCountersResponseProject = {[key: string]: unknown};
+
+export type DashboardCountersResponsePeriod =
+  (typeof DashboardCountersResponsePeriod)[keyof typeof DashboardCountersResponsePeriod];
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const DashboardCountersResponsePeriod = {
+  '7d': '7d',
+  '30d': '30d',
+  '3m': '3m',
+} as const;
+
+export interface DashboardPaymentService {
+  amount: number;
+  date_created: string;
+  id: number;
+  service_title: string;
+}
+
+export interface DashboardSeriesItem {
+  date: string;
+  referral_bookings: number;
+  referral_opens: number;
+  referral_payments: number;
+  visits: number;
+}
+
+export interface DashboardCountersResponse {
+  payment_services: DashboardPaymentService[];
+  period: DashboardCountersResponsePeriod;
+  project: DashboardCountersResponseProject;
+  range: DashboardCountersResponseRange;
+  series: DashboardSeriesItem[];
+  totals: DashboardCountersResponseTotals;
 }
 
 export interface UpdateUserDto {

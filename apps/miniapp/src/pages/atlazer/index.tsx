@@ -33,6 +33,7 @@ import {OrgContacts} from '@/features/OrgContacts';
 import {cn} from '@/lib/utils';
 import {
   useCustomerPublicControllerProfile,
+  useAnalyticsPublicControllerTrack,
   useMiniappsPublicControllerBySlug,
   useMiniappsPublicControllerBookings,
   useMiniappsPublicControllerYclientsRecordsStatus,
@@ -92,6 +93,7 @@ export function AtlazerPage() {
     },
   );
   const {data: profile} = useCustomerPublicControllerProfile();
+  const {mutateAsync: trackAnalytics} = useAnalyticsPublicControllerTrack();
   const primaryIntegration = miniapp?.integration ?? null;
   const companies = miniapp?.companies ?? [];
   const selectedCompany =
@@ -184,8 +186,18 @@ export function AtlazerPage() {
   const shareReferralLink = async () => {
     if (!referralLink) return;
 
+    trackAnalytics({
+      data: {
+        event_name: 'referral_share',
+        miniapp_slug: 'etlazer',
+      },
+    });
+
     if (shareURL) {
-      await shareURL(referralLink);
+      await shareURL(
+        referralLink,
+        'Дарю тебе 3000 рублей на первое посещение ET Laser',
+      );
       return;
     }
 

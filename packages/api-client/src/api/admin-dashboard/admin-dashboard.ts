@@ -14,6 +14,10 @@ import type {
   UseQueryOptions,
   UseQueryResult,
 } from '@tanstack/react-query';
+import type {
+  DashboardAdminControllerListCountersParams,
+  DashboardCountersResponse,
+} from '../integratorProjectAPI.schemas';
 import {customFetch} from '../../customFetch';
 import type {ErrorType} from '../../customFetch';
 
@@ -22,39 +26,51 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 /**
- * @summary Get profile of authorized user
+ * @summary Get ET Laser dashboard analytics
  */
-export const dashboardAdminControllerListCounters = () => {
-  return customFetch<void>({
+export const dashboardAdminControllerListCounters = (
+  params?: DashboardAdminControllerListCountersParams,
+) => {
+  return customFetch<DashboardCountersResponse>({
     url: `/api/admin/dashboard/dashboard`,
     method: 'GET',
+    params,
   });
 };
 
-export const getDashboardAdminControllerListCountersQueryKey = () => {
-  return [`/api/admin/dashboard/dashboard`] as const;
+export const getDashboardAdminControllerListCountersQueryKey = (
+  params?: DashboardAdminControllerListCountersParams,
+) => {
+  return [
+    `/api/admin/dashboard/dashboard`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getDashboardAdminControllerListCountersQueryOptions = <
   TData = Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
-  TError = ErrorType<unknown>,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
+  TError = ErrorType<DashboardCountersResponse>,
+>(
+  params?: DashboardAdminControllerListCountersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
+        TError,
+        TData
+      >
+    >;
+  },
+) => {
   const {query: queryOptions} = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getDashboardAdminControllerListCountersQueryKey();
+    queryOptions?.queryKey ??
+    getDashboardAdminControllerListCountersQueryKey(params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>
-  > = () => dashboardAdminControllerListCounters();
+  > = () => dashboardAdminControllerListCounters(params);
 
   return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
     Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
@@ -66,78 +82,93 @@ export const getDashboardAdminControllerListCountersQueryOptions = <
 export type DashboardAdminControllerListCountersQueryResult = NonNullable<
   Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>
 >;
-export type DashboardAdminControllerListCountersQueryError = ErrorType<unknown>;
+export type DashboardAdminControllerListCountersQueryError =
+  ErrorType<DashboardCountersResponse>;
 
 export function useDashboardAdminControllerListCounters<
   TData = Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
-  TError = ErrorType<unknown>,
->(options: {
-  query: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
-      TError,
-      TData
-    >
-  > &
-    Pick<
-      DefinedInitialDataOptions<
+  TError = ErrorType<DashboardCountersResponse>,
+>(
+  params: undefined | DashboardAdminControllerListCountersParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
         Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
         TError,
         TData
-      >,
-      'initialData'
-    >;
-}): DefinedUseQueryResult<TData, TError> & {queryKey: QueryKey};
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
+          TError,
+          TData
+        >,
+        'initialData'
+      >;
+  },
+): DefinedUseQueryResult<TData, TError> & {queryKey: QueryKey};
 export function useDashboardAdminControllerListCounters<
   TData = Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
-  TError = ErrorType<unknown>,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
-      TError,
-      TData
-    >
-  > &
-    Pick<
-      UndefinedInitialDataOptions<
+  TError = ErrorType<DashboardCountersResponse>,
+>(
+  params?: DashboardAdminControllerListCountersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
         Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
         TError,
         TData
-      >,
-      'initialData'
-    >;
-}): UseQueryResult<TData, TError> & {queryKey: QueryKey};
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
+          TError,
+          TData
+        >,
+        'initialData'
+      >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey};
 export function useDashboardAdminControllerListCounters<
   TData = Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
-  TError = ErrorType<unknown>,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
-      TError,
-      TData
-    >
-  >;
-}): UseQueryResult<TData, TError> & {queryKey: QueryKey};
+  TError = ErrorType<DashboardCountersResponse>,
+>(
+  params?: DashboardAdminControllerListCountersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
+        TError,
+        TData
+      >
+    >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey};
 /**
- * @summary Get profile of authorized user
+ * @summary Get ET Laser dashboard analytics
  */
 
 export function useDashboardAdminControllerListCounters<
   TData = Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
-  TError = ErrorType<unknown>,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
-      TError,
-      TData
-    >
-  >;
-}): UseQueryResult<TData, TError> & {queryKey: QueryKey} {
-  const queryOptions =
-    getDashboardAdminControllerListCountersQueryOptions(options);
+  TError = ErrorType<DashboardCountersResponse>,
+>(
+  params?: DashboardAdminControllerListCountersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof dashboardAdminControllerListCounters>>,
+        TError,
+        TData
+      >
+    >;
+  },
+): UseQueryResult<TData, TError> & {queryKey: QueryKey} {
+  const queryOptions = getDashboardAdminControllerListCountersQueryOptions(
+    params,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -20,6 +20,7 @@ import {MiniappsPublicModule} from 'src/interfaces/pub/miniapps/miniapps.module'
 import {SendpulsePublicModule} from 'src/interfaces/pub/sendpulse/sendpulse.module';
 import {WalletPublicModule} from 'src/interfaces/pub/wallet/wallet.module';
 import {WebhookPublicModule} from 'src/interfaces/pub/webhook/webhook.module';
+import {AnalyticsPublicModule} from 'src/interfaces/pub/analytics/analytics.module';
 import {TelegramCustomerModule} from 'src/modules/telegram/telegram-customer.module';
 import {TelegramCustomer} from 'src/modules/telegram/telegram-customer.entity';
 import {TelegramLogs} from 'src/modules/telegram/telegram-log.entity';
@@ -34,6 +35,7 @@ import {SendpulseClient} from 'src/modules/integrations/sendpulse/sendpulse-clie
 import {SendpulseLog} from 'src/modules/integrations/sendpulse/sendpulse-logs.entity';
 import {LoyaltyTransaction} from 'src/modules/customer-loyalty/loyalty-transaction.entity';
 import {YclientsEvent} from 'src/modules/customer-loyalty/yclients-event.entity';
+import {AnalyticsEvent} from 'src/modules/analytics/analytics-event.entity';
 
 @Module({
   imports: [
@@ -62,6 +64,7 @@ import {YclientsEvent} from 'src/modules/customer-loyalty/yclients-event.entity'
         SendpulseLog,
         LoyaltyTransaction,
         YclientsEvent,
+        AnalyticsEvent,
       ],
       migrations: ['dist/migrations/*.js'],
       synchronize: false,
@@ -84,6 +87,7 @@ import {YclientsEvent} from 'src/modules/customer-loyalty/yclients-event.entity'
     SendpulsePublicModule,
     WalletPublicModule,
     WebhookPublicModule,
+    AnalyticsPublicModule,
     TelegramCustomerModule,
     SendpulsePublicModule,
   ],

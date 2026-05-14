@@ -6,6 +6,7 @@ import {JWT_SECRET} from '../../../utils/jwt';
 import {TelegramCustomerModule} from 'src/modules/telegram/telegram-customer.module';
 import {SendpulseModule} from 'src/modules/integrations/sendpulse/sendpulse.module';
 import {CustomerLoyaltyModule} from 'src/modules/customer-loyalty/customer-loyalty.module';
+import {AnalyticsModule} from 'src/modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import {CustomerLoyaltyModule} from 'src/modules/customer-loyalty/customer-loyal
     TelegramCustomerModule,
     SendpulseModule,
     CustomerLoyaltyModule,
+    AnalyticsModule,
   ],
   providers: [JwtService],
   controllers: [CustomerPublicController],

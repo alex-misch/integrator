@@ -4,6 +4,9 @@ import {QueryFailedError, Repository} from 'typeorm';
 import {normalizePhone} from 'src/utils/phone';
 import {YclientsEvent} from './yclients-event.entity';
 import {YClientRequest} from './yclients-webhook.types';
+import {AnalyticsService} from '../analytics/analytics.service';
+import {TelegramCustomer} from '../telegram/telegram-customer.entity';
+import {SendpulseClient} from '../integrations/sendpulse/sendpulse-clients.entity';
 
 type WebhookSaveResult =
   | {
@@ -16,11 +19,25 @@ type WebhookSaveResult =
       details: string;
     };
 
+type ReferredCustomerContext = {
+  customer: TelegramCustomer;
+  referrer: TelegramCustomer;
+  referralCode: string;
+};
+
 @Injectable()
 export class YclientsEventsService {
   constructor(
     @InjectRepository(YclientsEvent)
     private readonly events: Repository<YclientsEvent>,
+
+    @InjectRepository(TelegramCustomer)
+    private readonly customers: Repository<TelegramCustomer>,
+
+    @InjectRepository(SendpulseClient)
+    private readonly sendpulseClients: Repository<SendpulseClient>,
+
+    private readonly analytics: AnalyticsService,
   ) {}
 
   async saveWebhookEvent(
@@ -61,6 +78,15 @@ export class YclientsEventsService {
         }),
       );
 
+      await this.recordAnalyticsEvent({
+        payload,
+        eventId: event.id,
+        amount,
+        phone,
+        companyId,
+        resourceId,
+      });
+
       return {
         status: 'saved',
         event_id: event.id,
@@ -75,6 +101,15 @@ export class YclientsEventsService {
       if (!duplicate) {
         throw error;
       }
+
+      await this.recordAnalyticsEvent({
+        payload,
+        eventId: duplicate.id,
+        amount,
+        phone,
+        companyId,
+        resourceId,
+      });
 
       return {
         status: 'saved',
@@ -94,6 +129,68 @@ export class YclientsEventsService {
     }
 
     return payload.resource ?? 'unknown';
+  }
+
+  private async recordAnalyticsEvent(props: {
+    payload: YClientRequest;
+    eventId: number;
+    amount: number;
+    phone: string;
+    companyId: number | null;
+    resourceId: number | null;
+  }) {
+    const eventName = this.resolveAnalyticsEventName(
+      props.payload,
+      props.amount,
+    );
+    if (!eventName) {
+      return;
+    }
+
+    const referred = await this.findReferredCustomerByPhone(props.phone);
+    if (!referred) {
+      return;
+    }
+
+    await this.analytics.recordEventOnce({
+      eventName,
+      customerId: referred.customer.id,
+      referrerCustomerId: referred.referrer.id,
+      referralCode: referred.referralCode,
+      phone: props.phone,
+      amount: eventName === 'referral_payment' ? props.amount : null,
+      serviceTitle:
+        eventName === 'referral_payment'
+          ? this.extractServiceTitle(props.payload)
+          : null,
+      resource: props.payload.resource ?? null,
+      resourceId: props.resourceId,
+      externalEventId: props.eventId,
+      companyId: props.companyId,
+      metadata: this.reduceAnalyticsPayload(props.payload),
+    });
+  }
+
+  private resolveAnalyticsEventName(payload: YClientRequest, amount: number) {
+    if (this.isBookEvent(payload)) {
+      return 'referral_booking' as const;
+    }
+
+    if (this.isPaymentEvent(payload, amount)) {
+      return 'referral_payment' as const;
+    }
+
+    return null;
+  }
+
+  private isBookEvent(payload: YClientRequest): boolean {
+    const data = payload?.data;
+    return (
+      payload?.resource === 'record' &&
+      ['update', 'create'].includes(payload?.status ?? '') &&
+      (data?.visit_id ?? 0) > 0 &&
+      (data?.attendance === 2 || data?.visit_attendance === 2)
+    );
   }
 
   private isPaymentEvent(payload: YClientRequest, amount: number) {
@@ -137,6 +234,130 @@ export class YclientsEventsService {
           : null,
       },
     };
+  }
+
+  private reduceAnalyticsPayload(
+    payload: YClientRequest,
+  ): Record<string, unknown> {
+    return {
+      resource: payload.resource ?? null,
+      resource_id: payload.resource_id ?? null,
+      status: payload.status ?? null,
+      data: {
+        id: payload.data?.id ?? null,
+        record_id: payload.data?.record_id ?? null,
+        visit_id: payload.data?.visit_id ?? null,
+        amount: payload.data?.amount ?? null,
+        client: payload.data?.client
+          ? {
+              id: payload.data.client.id ?? null,
+              phone: payload.data.client.phone ?? null,
+              name:
+                payload.data.client.display_name ??
+                [payload.data.client.name, payload.data.client.surname]
+                  .filter(Boolean)
+                  .join(' '),
+            }
+          : null,
+      },
+    };
+  }
+
+  private async findReferredCustomerByPhone(
+    phone: string,
+  ): Promise<ReferredCustomerContext | null> {
+    const customers = await this.customers
+      .createQueryBuilder('customer')
+      .where('customer.phone IS NOT NULL')
+      .getMany();
+
+    const customer =
+      customers.find(item => normalizePhone(item.phone) === phone) ?? null;
+    if (!customer) {
+      return null;
+    }
+
+    const referralCode =
+      this.extractReferralCode(customer.start_param) ??
+      (await this.findSendpulseReferrerCode(phone, customer.id));
+    if (!referralCode) {
+      return null;
+    }
+
+    const referrer = await this.customers.findOne({
+      where: {referral_code: referralCode, is_blocked: false},
+    });
+    if (!referrer || String(referrer.id) === String(customer.id)) {
+      return null;
+    }
+
+    return {customer, referrer, referralCode};
+  }
+
+  private async findSendpulseReferrerCode(phone: string, customerId: number) {
+    const clients = await this.sendpulseClients
+      .createQueryBuilder('client')
+      .where('client.tg_referrer IS NOT NULL')
+      .andWhere('client.phone IS NOT NULL')
+      .orderBy('client.date_created', 'ASC')
+      .getMany();
+
+    const client = clients.find(item => normalizePhone(item.phone) === phone);
+    if (!client?.tg_referrer) {
+      return null;
+    }
+
+    if (
+      client.telegram_id &&
+      String(client.telegram_id) === String(customerId)
+    ) {
+      return null;
+    }
+
+    return client.tg_referrer;
+  }
+
+  private extractReferralCode(startParam?: string | null) {
+    if (!startParam) {
+      return null;
+    }
+
+    const match = String(startParam).match(/^tg_([a-z0-9_-]+)$/i);
+    if (match?.[1]) {
+      return match[1];
+    }
+
+    return /^[a-z0-9_-]+$/i.test(startParam) ? startParam : null;
+  }
+
+  private extractServiceTitle(payload: YClientRequest) {
+    const data = payload.data as
+      | (YClientRequest['data'] & {
+          title?: string;
+          service_title?: string;
+          service?: {title?: string; name?: string};
+          services?: Array<{title?: string; name?: string}>;
+          goods_transactions?: Array<{
+            title?: string;
+            name?: string;
+            service?: {title?: string; name?: string};
+          }>;
+        })
+      | null
+      | undefined;
+
+    return (
+      data?.service_title ??
+      data?.service?.title ??
+      data?.service?.name ??
+      data?.services?.[0]?.title ??
+      data?.services?.[0]?.name ??
+      data?.goods_transactions?.[0]?.service?.title ??
+      data?.goods_transactions?.[0]?.title ??
+      data?.goods_transactions?.[0]?.name ??
+      data?.title ??
+      null
+    );
   }
 
   private toInt(value: unknown) {

@@ -26,6 +26,7 @@ import {CustomerProfileResponse} from './dto/customer.dto';
 import {VerifyCustomerDto} from 'src/modules/telegram/dto/telegram-customer.dto';
 import {SendpulseService} from 'src/modules/integrations/sendpulse/sendpulse.service';
 import {CustomerLoyaltyService} from 'src/modules/customer-loyalty/customer-loyalty.service';
+import {AnalyticsService} from 'src/modules/analytics/analytics.service';
 
 @ApiTags('public-customer')
 @Controller('public/customer')
@@ -34,6 +35,7 @@ export class CustomerPublicController {
     private readonly customerService: TelegramCustomerService,
     private readonly sendpulseService: SendpulseService,
     private readonly loyaltyService: CustomerLoyaltyService,
+    private readonly analytics: AnalyticsService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
@@ -88,6 +90,11 @@ export class CustomerPublicController {
         where: {id: +jwtPayload.sub},
       });
       if (token && jwtPayload && jwtCustomer?.username == jwtPayload.username) {
+        this.analytics.recordVisit({
+          customer: jwtCustomer,
+          companyId: payload.company_id,
+          miniappSlug: 'etlazer',
+        });
         return jwtCustomer;
       }
       throw new Error('Fail to verify JWT');
@@ -114,6 +121,11 @@ export class CustomerPublicController {
       JwtStrategy.saveToken(response, access_token);
 
       await this.customerService.login(customer.id);
+      this.analytics.recordVisit({
+        customer,
+        companyId: payload.company_id,
+        miniappSlug: 'etlazer',
+      });
       return customer;
     }
   }

@@ -2,16 +2,21 @@ import {Controller, Get, Query} from '@nestjs/common';
 import {ApiOperation, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {UseAdminGuard} from '../../../decorators/UseAdminGuard';
 
-import {DashboardFilter} from './dto/dashboard.dto';
+import {DashboardCountersResponse, DashboardFilter} from './dto/dashboard.dto';
+import {AnalyticsService} from 'src/modules/analytics/analytics.service';
 
 @ApiTags('admin-dashboard')
 @Controller('admin/dashboard')
 @UseAdminGuard()
 export class DashboardAdminController {
-  constructor() {}
+  constructor(private readonly analytics: AnalyticsService) {}
 
   @Get('dashboard')
-  @ApiOperation({summary: 'Get profile of authorized user'})
-  // @ApiResponse({type: })
-  async listCounters(@Query() filter: DashboardFilter) {}
+  @ApiOperation({summary: 'Get ET Laser dashboard analytics'})
+  @ApiResponse({type: DashboardCountersResponse})
+  async listCounters(
+    @Query() filter: DashboardFilter,
+  ): Promise<DashboardCountersResponse> {
+    return this.analytics.getDashboard(filter.period ?? '7d');
+  }
 }
