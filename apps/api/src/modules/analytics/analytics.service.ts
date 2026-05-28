@@ -3,6 +3,8 @@ import {InjectRepository} from '@nestjs/typeorm';
 import {Between, Repository} from 'typeorm';
 import {AnalyticsEvent, AnalyticsEventName} from './analytics-event.entity';
 import {TelegramCustomer} from '../telegram/telegram-customer.entity';
+import {LoyaltyTransaction} from '../customer-loyalty/loyalty-transaction.entity';
+import {YclientsEvent} from '../customer-loyalty/yclients-event.entity';
 
 export type DashboardPeriod = '7d' | '30d' | '3m';
 
@@ -14,6 +16,9 @@ export class AnalyticsService {
 
     @InjectRepository(TelegramCustomer)
     private readonly customers: Repository<TelegramCustomer>,
+
+    @InjectRepository(LoyaltyTransaction)
+    private readonly loyaltyTransactions: Repository<LoyaltyTransaction>,
   ) {}
 
   async recordVisit(props: {
@@ -110,21 +115,21 @@ export class AnalyticsService {
       await Promise.all([
         this.customers.count(),
         this.countEvents('referral_share'),
-        this.countEvents('referral_open'),
-        this.countEvents('referral_booking'),
+        this.countReferralCustomers(),
+        this.countReferralTransactions(),
       ]);
 
     const [visitsByDay, referralsByDay, bookingsByDay, paymentsByDay] =
       await Promise.all([
         this.countByDay('visit', range.start, range.end),
-        this.countByDay('referral_open', range.start, range.end),
-        this.countByDay('referral_booking', range.start, range.end),
-        this.sumByDay('referral_payment', range.start, range.end),
+        this.referralCustomersByDay(range.start, range.end),
+        this.referralTransactionsByDay(range.start, range.end),
+        this.referralTransactionPaymentsByDay(range.start, range.end),
       ]);
 
     const [paymentTotal, paymentServices] = await Promise.all([
-      this.sumEvents('referral_payment', range.start, range.end),
-      this.paymentServices(range.start, range.end),
+      this.sumReferralTransactionPayments(range.start, range.end),
+      this.referralTransactionServices(range.start, range.end),
     ]);
 
     return {
@@ -194,21 +199,6 @@ export class AnalyticsService {
     return this.events.count({where: {event_name: eventName}});
   }
 
-  private async sumEvents(
-    eventName: AnalyticsEventName,
-    start: Date,
-    end: Date,
-  ) {
-    const result = await this.events
-      .createQueryBuilder('event')
-      .select('COALESCE(SUM(event.amount), 0)', 'total')
-      .where('event.event_name = :eventName', {eventName})
-      .andWhere('event.date_created BETWEEN :start AND :end', {start, end})
-      .getRawOne<{total: string}>();
-
-    return Number(result?.total ?? 0);
-  }
-
   private async countByDay(
     eventName: AnalyticsEventName,
     start: Date,
@@ -227,43 +217,6 @@ export class AnalyticsService {
       .getRawMany<{day: string; value: string}>();
 
     return new Map(rows.map(row => [row.day, Number(row.value)]));
-  }
-
-  private async sumByDay(
-    eventName: AnalyticsEventName,
-    start: Date,
-    end: Date,
-  ) {
-    const rows = await this.events
-      .createQueryBuilder('event')
-      .select(
-        `to_char(date_trunc('day', event.date_created), 'YYYY-MM-DD')`,
-        'day',
-      )
-      .addSelect('COALESCE(SUM(event.amount), 0)', 'value')
-      .where({event_name: eventName, date_created: Between(start, end)})
-      .groupBy(`date_trunc('day', event.date_created)`)
-      .orderBy(`date_trunc('day', event.date_created)`, 'ASC')
-      .getRawMany<{day: string; value: string}>();
-
-    return new Map(rows.map(row => [row.day, Number(row.value)]));
-  }
-
-  private async paymentServices(start: Date, end: Date) {
-    return this.events.find({
-      where: {
-        event_name: 'referral_payment',
-        date_created: Between(start, end),
-      },
-      order: {date_created: 'DESC'},
-      take: 8,
-      select: {
-        id: true,
-        service_title: true,
-        amount: true,
-        date_created: true,
-      },
-    });
   }
 
   private buildSeries(
@@ -307,6 +260,155 @@ export class AnalyticsService {
     }
 
     return /^[a-z0-9_-]+$/i.test(startParam) ? startParam : null;
+  }
+
+  private validReferralCustomersQuery() {
+    return this.customers
+      .createQueryBuilder('customer')
+      .innerJoin(
+        TelegramCustomer,
+        'referrer',
+        `
+          referrer.referral_code = CASE
+            WHEN customer.start_param ~* '^tg_[a-z0-9_-]+$'
+              THEN substring(customer.start_param from 4)
+            WHEN customer.start_param ~* '^[a-z0-9_-]+$'
+              THEN customer.start_param
+            ELSE NULL
+          END
+          AND referrer.is_blocked = false
+          AND referrer.id <> customer.id
+        `,
+      )
+      .where('customer.start_param IS NOT NULL');
+  }
+
+  private async countReferralCustomers() {
+    return this.validReferralCustomersQuery().getCount();
+  }
+
+  private async referralCustomersByDay(start: Date, end: Date) {
+    const rows = await this.validReferralCustomersQuery()
+      .select(
+        `to_char(date_trunc('day', customer.date_created), 'YYYY-MM-DD')`,
+        'day',
+      )
+      .addSelect('COUNT(*)', 'value')
+      .andWhere('customer.date_created BETWEEN :start AND :end', {start, end})
+      .groupBy(`date_trunc('day', customer.date_created)`)
+      .orderBy(`date_trunc('day', customer.date_created)`, 'ASC')
+      .getRawMany<{day: string; value: string}>();
+
+    return new Map(rows.map(row => [row.day, Number(row.value)]));
+  }
+
+  private referralTransactionsQuery() {
+    return this.loyaltyTransactions
+      .createQueryBuilder('transaction')
+      .where('transaction.source = :source', {
+        source: 'referral_payment_bonus',
+      })
+      .andWhere('transaction.referred_client_record_id IS NOT NULL');
+  }
+
+  private async countReferralTransactions() {
+    return this.referralTransactionsQuery().getCount();
+  }
+
+  private async referralTransactionsByDay(start: Date, end: Date) {
+    const rows = await this.referralTransactionsQuery()
+      .select(
+        `to_char(date_trunc('day', transaction.date_created), 'YYYY-MM-DD')`,
+        'day',
+      )
+      .addSelect('COUNT(*)', 'value')
+      .andWhere('transaction.date_created BETWEEN :start AND :end', {
+        start,
+        end,
+      })
+      .groupBy(`date_trunc('day', transaction.date_created)`)
+      .orderBy(`date_trunc('day', transaction.date_created)`, 'ASC')
+      .getRawMany<{day: string; value: string}>();
+
+    return new Map(rows.map(row => [row.day, Number(row.value)]));
+  }
+
+  private async referralTransactionPaymentsByDay(start: Date, end: Date) {
+    const rows = await this.referralTransactionsQuery()
+      .select(
+        `to_char(date_trunc('day', transaction.date_created), 'YYYY-MM-DD')`,
+        'day',
+      )
+      .addSelect('COALESCE(SUM(transaction.purchase_amount), 0)', 'value')
+      .andWhere('transaction.date_created BETWEEN :start AND :end', {
+        start,
+        end,
+      })
+      .groupBy(`date_trunc('day', transaction.date_created)`)
+      .orderBy(`date_trunc('day', transaction.date_created)`, 'ASC')
+      .getRawMany<{day: string; value: string}>();
+
+    return new Map(rows.map(row => [row.day, Number(row.value)]));
+  }
+
+  private async sumReferralTransactionPayments(start: Date, end: Date) {
+    const result = await this.referralTransactionsQuery()
+      .select('COALESCE(SUM(transaction.purchase_amount), 0)', 'total')
+      .andWhere('transaction.date_created BETWEEN :start AND :end', {
+        start,
+        end,
+      })
+      .getRawOne<{total: string}>();
+
+    return Number(result?.total ?? 0);
+  }
+
+  private async referralTransactionServices(start: Date, end: Date) {
+    const rows = await this.referralTransactionsQuery()
+      .select('transaction.id', 'id')
+      .addSelect(
+        `
+          COALESCE(
+            transaction.metadata->>'service_title',
+            event.json->'data'->>'service_title',
+            event.json->'data'->'service'->>'title',
+            event.json->'data'->'service'->>'name',
+            event.json->'data'->'services'->0->>'title',
+            event.json->'data'->'services'->0->>'name',
+            event.json->'data'->'goods_transactions'->0->'service'->>'title',
+            event.json->'data'->'goods_transactions'->0->>'title',
+            event.json->'data'->'goods_transactions'->0->>'name',
+            event.json->'data'->>'title'
+          )
+        `,
+        'service_title',
+      )
+      .addSelect('transaction.purchase_amount', 'amount')
+      .addSelect('transaction.date_created', 'date_created')
+      .leftJoin(
+        YclientsEvent,
+        'event',
+        'event.id = transaction.yclients_event_id',
+      )
+      .andWhere('transaction.date_created BETWEEN :start AND :end', {
+        start,
+        end,
+      })
+      .orderBy('transaction.date_created', 'DESC')
+      .take(8)
+      .getRawMany<{
+        id: string;
+        service_title: string | null;
+        amount: string | null;
+        date_created: Date;
+      }>();
+
+    return rows.map(row => ({
+      id: Number(row.id),
+      service_title: row.service_title,
+      amount: row.amount == null ? null : Number(row.amount),
+      date_created: row.date_created,
+    }));
   }
 
   private formatDate(date: Date) {

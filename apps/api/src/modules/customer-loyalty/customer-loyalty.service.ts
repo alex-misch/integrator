@@ -115,8 +115,39 @@ export class CustomerLoyaltyService {
           referred_phone: referredClient.phone,
           tg_referrer: referredClient.tg_referrer,
           bonus_policy: 'first_purchase_fixed_1000',
+          service_title: this.extractServiceTitle(event.json),
         },
       }),
+    );
+  }
+
+  private extractServiceTitle(payload: Record<string, unknown> | null) {
+    const data = payload?.data as
+      | {
+          title?: string;
+          service_title?: string;
+          service?: {title?: string; name?: string};
+          services?: Array<{title?: string; name?: string}>;
+          goods_transactions?: Array<{
+            title?: string;
+            name?: string;
+            service?: {title?: string; name?: string};
+          }>;
+        }
+      | null
+      | undefined;
+
+    return (
+      data?.service_title ??
+      data?.service?.title ??
+      data?.service?.name ??
+      data?.services?.[0]?.title ??
+      data?.services?.[0]?.name ??
+      data?.goods_transactions?.[0]?.service?.title ??
+      data?.goods_transactions?.[0]?.title ??
+      data?.goods_transactions?.[0]?.name ??
+      data?.title ??
+      null
     );
   }
 

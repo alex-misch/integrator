@@ -180,7 +180,9 @@ export class SendpulseService {
     }
 
     if (!existingClient) {
-      return this.sendpulseClient.save(this.sendpulseClient.create(nextFields));
+      return await this.sendpulseClient.save(
+        this.sendpulseClient.create(nextFields),
+      );
     }
 
     await this.sendpulseClient.update(existingClient.record_id, nextFields);
