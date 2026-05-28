@@ -115,14 +115,14 @@ export class AnalyticsService {
       await Promise.all([
         this.customers.count(),
         this.countEvents('referral_share'),
-        this.countReferralCustomers(),
+        this.countWelcomeReferralTransactions(),
         this.countReferralTransactions(),
       ]);
 
     const [visitsByDay, referralsByDay, bookingsByDay, paymentsByDay] =
       await Promise.all([
         this.countByDay('visit', range.start, range.end),
-        this.referralCustomersByDay(range.start, range.end),
+        this.welcomeReferralTransactionsByDay(range.start, range.end),
         this.referralTransactionsByDay(range.start, range.end),
         this.referralTransactionPaymentsByDay(range.start, range.end),
       ]);
@@ -262,41 +262,31 @@ export class AnalyticsService {
     return /^[a-z0-9_-]+$/i.test(startParam) ? startParam : null;
   }
 
-  private validReferralCustomersQuery() {
-    return this.customers
-      .createQueryBuilder('customer')
-      .innerJoin(
-        TelegramCustomer,
-        'referrer',
-        `
-          referrer.referral_code = CASE
-            WHEN customer.start_param ~* '^tg_[a-z0-9_-]+$'
-              THEN substring(customer.start_param from 4)
-            WHEN customer.start_param ~* '^[a-z0-9_-]+$'
-              THEN customer.start_param
-            ELSE NULL
-          END
-          AND referrer.is_blocked = false
-          AND referrer.id <> customer.id
-        `,
-      )
-      .where('customer.start_param IS NOT NULL');
+  private welcomeReferralTransactionsQuery() {
+    return this.loyaltyTransactions
+      .createQueryBuilder('transaction')
+      .where('transaction.source = :source', {
+        source: 'welcome_referral_bonus',
+      });
   }
 
-  private async countReferralCustomers() {
-    return this.validReferralCustomersQuery().getCount();
+  private async countWelcomeReferralTransactions() {
+    return this.welcomeReferralTransactionsQuery().getCount();
   }
 
-  private async referralCustomersByDay(start: Date, end: Date) {
-    const rows = await this.validReferralCustomersQuery()
+  private async welcomeReferralTransactionsByDay(start: Date, end: Date) {
+    const rows = await this.welcomeReferralTransactionsQuery()
       .select(
-        `to_char(date_trunc('day', customer.date_created), 'YYYY-MM-DD')`,
+        `to_char(date_trunc('day', transaction.date_created), 'YYYY-MM-DD')`,
         'day',
       )
       .addSelect('COUNT(*)', 'value')
-      .andWhere('customer.date_created BETWEEN :start AND :end', {start, end})
-      .groupBy(`date_trunc('day', customer.date_created)`)
-      .orderBy(`date_trunc('day', customer.date_created)`, 'ASC')
+      .andWhere('transaction.date_created BETWEEN :start AND :end', {
+        start,
+        end,
+      })
+      .groupBy(`date_trunc('day', transaction.date_created)`)
+      .orderBy(`date_trunc('day', transaction.date_created)`, 'ASC')
       .getRawMany<{day: string; value: string}>();
 
     return new Map(rows.map(row => [row.day, Number(row.value)]));
