@@ -5,6 +5,10 @@ import {AnalyticsEvent, AnalyticsEventName} from './analytics-event.entity';
 import {TelegramCustomer} from '../telegram/telegram-customer.entity';
 import {LoyaltyTransaction} from '../customer-loyalty/loyalty-transaction.entity';
 import {YclientsEvent} from '../customer-loyalty/yclients-event.entity';
+import {
+  MiniappBooking,
+  MiniappBookingStatus,
+} from '../miniapp/miniapp-booking.entity';
 
 export type DashboardPeriod = '7d' | '30d' | '3m';
 
@@ -19,6 +23,9 @@ export class AnalyticsService {
 
     @InjectRepository(LoyaltyTransaction)
     private readonly loyaltyTransactions: Repository<LoyaltyTransaction>,
+
+    @InjectRepository(MiniappBooking)
+    private readonly bookings: Repository<MiniappBooking>,
   ) {}
 
   async recordVisit(props: {
@@ -111,13 +118,19 @@ export class AnalyticsService {
 
   async getDashboard(period: DashboardPeriod = '7d') {
     const range = this.getDateRange(period);
-    const [totalCustomers, referralShares, referralOpenTotal, bookingTotal] =
-      await Promise.all([
-        this.customers.count(),
-        this.countEvents('referral_share'),
-        this.countWelcomeReferralTransactions(),
-        this.countReferralTransactions(),
-      ]);
+    const [
+      totalCustomers,
+      referralShares,
+      referralOpenTotal,
+      referralBookingTotal,
+      miniappBookings,
+    ] = await Promise.all([
+      this.customers.count(),
+      this.countEvents('referral_share'),
+      this.countWelcomeReferralTransactions(),
+      this.countReferralTransactions(),
+      this.getMiniappBookingStats(range.start, range.end),
+    ]);
 
     const [visitsByDay, referralsByDay, bookingsByDay, paymentsByDay] =
       await Promise.all([
@@ -143,7 +156,10 @@ export class AnalyticsService {
         unique_customers: totalCustomers,
         referral_shares: referralShares,
         referral_opens_total: referralOpenTotal,
-        referral_bookings_total: bookingTotal,
+        referral_bookings_total: referralBookingTotal,
+        miniapp_bookings_total: miniappBookings.total,
+        miniapp_bookings_completed: miniappBookings.completed,
+        miniapp_bookings_canceled: miniappBookings.canceled,
         referral_payments_amount: paymentTotal,
       },
       series: this.buildSeries(range.start, range.days, {
@@ -303,6 +319,36 @@ export class AnalyticsService {
 
   private async countReferralTransactions() {
     return this.referralTransactionsQuery().getCount();
+  }
+
+  private async getMiniappBookingStats(start: Date, end: Date) {
+    const result = await this.bookings
+      .createQueryBuilder('booking')
+      .select('COUNT(*)', 'total')
+      .addSelect(
+        `COUNT(*) FILTER (WHERE booking.status = :completed)`,
+        'completed',
+      )
+      .addSelect(
+        `COUNT(*) FILTER (WHERE booking.status = :canceled)`,
+        'canceled',
+      )
+      .where('booking.date_created BETWEEN :start AND :end', {start, end})
+      .setParameters({
+        completed: MiniappBookingStatus.Completed,
+        canceled: MiniappBookingStatus.Canceled,
+      })
+      .getRawOne<{
+        total: string;
+        completed: string;
+        canceled: string;
+      }>();
+
+    return {
+      total: Number(result?.total ?? 0),
+      completed: Number(result?.completed ?? 0),
+      canceled: Number(result?.canceled ?? 0),
+    };
   }
 
   private async referralTransactionsByDay(start: Date, end: Date) {

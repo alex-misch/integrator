@@ -50,6 +50,9 @@ type DashboardData = {
     referral_shares: number;
     referral_opens_total: number;
     referral_bookings_total: number;
+    miniapp_bookings_total: number;
+    miniapp_bookings_completed: number;
+    miniapp_bookings_canceled: number;
     referral_payments_amount: number;
   };
   series: Array<{
@@ -156,7 +159,7 @@ export default function DashboardPage() {
           <MetricCard
             title="Посещения"
             value={formatCount(filteredVisits)}
-            description="Успешные verify"
+            description="Сколько раз открыли miniapp"
             icon={MousePointer2}
             tone="violet"
             isLoading={isLoading}
@@ -179,8 +182,8 @@ export default function DashboardPage() {
           />
           <MetricCard
             title="Записались"
-            value={formatCount(filteredBookings)}
-            description={`${formatCount(data?.totals.referral_bookings_total)} за все время`}
+            value={formatCount(data?.totals.miniapp_bookings_total)}
+            description={`Дошли: ${formatCount(data?.totals.miniapp_bookings_completed)} · Отменили: ${formatCount(data?.totals.miniapp_bookings_canceled)}`}
             icon={CalendarDays}
             tone="rose"
             isLoading={isLoading}

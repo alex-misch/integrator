@@ -4,6 +4,7 @@ import {AnalyticsEvent} from './analytics-event.entity';
 import {AnalyticsService} from './analytics.service';
 import {TelegramCustomer} from '../telegram/telegram-customer.entity';
 import {LoyaltyTransaction} from '../customer-loyalty/loyalty-transaction.entity';
+import {MiniappBooking} from '../miniapp/miniapp-booking.entity';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import {LoyaltyTransaction} from '../customer-loyalty/loyalty-transaction.entity
       AnalyticsEvent,
       TelegramCustomer,
       LoyaltyTransaction,
+      MiniappBooking,
     ]),
   ],
   providers: [AnalyticsService],

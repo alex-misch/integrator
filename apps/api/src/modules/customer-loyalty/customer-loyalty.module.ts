@@ -11,6 +11,7 @@ import {YclientsEventsService} from './yclients-events.service';
 import {AnalyticsModule} from '../analytics/analytics.module';
 import {TelegramCustomer} from '../telegram/telegram-customer.entity';
 import {SendpulseClient} from '../integrations/sendpulse/sendpulse-clients.entity';
+import {MiniappBooking} from '../miniapp/miniapp-booking.entity';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import {SendpulseClient} from '../integrations/sendpulse/sendpulse-clients.entit
       YclientsEvent,
       TelegramCustomer,
       SendpulseClient,
+      MiniappBooking,
     ]),
     TelegramCustomerModule,
     SendpulseModule,

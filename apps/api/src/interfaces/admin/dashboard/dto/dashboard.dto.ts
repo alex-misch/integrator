@@ -55,6 +55,9 @@ export class DashboardCountersResponse {
       referral_shares: 45,
       referral_opens_total: 19,
       referral_bookings_total: 7,
+      miniapp_bookings_total: 33,
+      miniapp_bookings_completed: 21,
+      miniapp_bookings_canceled: 4,
       referral_payments_amount: 45000,
     },
   })
@@ -63,6 +66,9 @@ export class DashboardCountersResponse {
     referral_shares: number;
     referral_opens_total: number;
     referral_bookings_total: number;
+    miniapp_bookings_total: number;
+    miniapp_bookings_completed: number;
+    miniapp_bookings_canceled: number;
     referral_payments_amount: number;
   };
 

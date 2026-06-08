@@ -7,6 +7,11 @@ import {YClientRequest} from './yclients-webhook.types';
 import {AnalyticsService} from '../analytics/analytics.service';
 import {TelegramCustomer} from '../telegram/telegram-customer.entity';
 import {SendpulseClient} from '../integrations/sendpulse/sendpulse-clients.entity';
+import {MiniappBooking} from '../miniapp/miniapp-booking.entity';
+import {
+  getYclientsRecordIdFromPayload,
+  mapYclientsRecordPayloadToBookingStatus,
+} from './yclients-record-status';
 
 type WebhookSaveResult =
   | {
@@ -36,6 +41,9 @@ export class YclientsEventsService {
 
     @InjectRepository(SendpulseClient)
     private readonly sendpulseClients: Repository<SendpulseClient>,
+
+    @InjectRepository(MiniappBooking)
+    private readonly bookings: Repository<MiniappBooking>,
 
     private readonly analytics: AnalyticsService,
   ) {}
@@ -78,6 +86,8 @@ export class YclientsEventsService {
         }),
       );
 
+      await this.syncMiniappBookingStatusFromYclients(payload);
+
       await this.recordAnalyticsEvent({
         payload,
         eventId: event.id,
@@ -102,6 +112,8 @@ export class YclientsEventsService {
         throw error;
       }
 
+      await this.syncMiniappBookingStatusFromYclients(payload);
+
       await this.recordAnalyticsEvent({
         payload,
         eventId: duplicate.id,
@@ -117,6 +129,23 @@ export class YclientsEventsService {
         event_name: duplicate.event_name,
       };
     }
+  }
+
+  private async syncMiniappBookingStatusFromYclients(payload: YClientRequest) {
+    const nextStatus = mapYclientsRecordPayloadToBookingStatus(payload);
+    if (!nextStatus) {
+      return;
+    }
+
+    const recordId = getYclientsRecordIdFromPayload(payload);
+    if (!recordId) {
+      return;
+    }
+
+    await this.bookings.update(
+      {yclients_record_id: recordId},
+      {status: nextStatus},
+    );
   }
 
   private resolveEventName(payload: YClientRequest, amount: number) {

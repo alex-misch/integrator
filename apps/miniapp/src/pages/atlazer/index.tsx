@@ -140,6 +140,7 @@ export function AtlazerPage() {
   const recordDate = latestRecord?.date ?? '';
   const recordTime = latestRecord?.time ?? '';
   const recordServiceTitle = latestRecord?.service?.title || 'Запись';
+  const isLatestRecordArchived = latestRecord?.status === 'completed';
   const recordMonthLabel = useMemo(() => {
     if (!recordDate) return '';
     const date = new Date(recordDate);
@@ -353,9 +354,17 @@ export function AtlazerPage() {
                 </div>
                 <div className="p-4 flex flex-col items-start justify-center gap-1">
                   <p className="font-medium">{recordServiceTitle}</p>
-                  <Badge variant="success">
-                    {recordTime.split(':').slice(0, 2).join(':') || 'Активная'}
-                  </Badge>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant="success">
+                      {recordTime.split(':').slice(0, 2).join(':') ||
+                        'Активная'}
+                    </Badge>
+                    {isLatestRecordArchived && (
+                      <Badge variant="success" className="bg-black/45">
+                        архив
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </button>
             ) : (
