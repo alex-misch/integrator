@@ -132,6 +132,26 @@ export class SendpulseApi {
     );
   }
 
+  async runFlow(params: {
+    contactId: string;
+    flowId: string;
+    externalData?: Record<string, unknown>;
+  }) {
+    await this.ready;
+
+    const response = await this.request({
+      method: 'POST',
+      path: '/telegram/flows/run',
+      body: {
+        contact_id: params.contactId,
+        flow_id: params.flowId,
+        ...(params.externalData ? {external_data: params.externalData} : {}),
+      },
+    });
+
+    return response.ok;
+  }
+
   private getAuthHeaders(): Record<string, string> {
     if (!this.token) {
       throw new Error('[Sendpulse] token is not configured');

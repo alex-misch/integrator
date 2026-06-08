@@ -45,6 +45,7 @@ type SendpulseClientFields = {
 @Injectable()
 export class SendpulseService {
   private readonly referralWelcomeBonusPoints = 3000;
+  private readonly appointmentBookedFlowId = '67cfd901a548e6ad610b9337';
   private sendpulseApi: SendpulseApi | null = null;
 
   constructor(
@@ -112,6 +113,58 @@ export class SendpulseService {
       this.buildWebhookPayloadFromApiContact(contact, telegramId),
     );
     return normalizePhone(savedClient.phone ?? null);
+  }
+
+  async runAppointmentBookedFlow(
+    telegramId: number | string,
+    externalData?: Record<string, unknown>,
+  ) {
+    try {
+      const contactId = await this.resolveContactIdByTelegramId(telegramId);
+
+      if (!contactId) {
+        console.warn(
+          '[Sendpulse] appointment flow skipped: contact_id missing',
+          {
+            telegramId: String(telegramId),
+          },
+        );
+        return false;
+      }
+
+      return this.getApi().runFlow({
+        contactId,
+        flowId: this.appointmentBookedFlowId,
+        externalData,
+      });
+    } catch (error) {
+      console.error('[Sendpulse] appointment flow failed', {
+        telegramId: String(telegramId),
+        error,
+      });
+      return false;
+    }
+  }
+
+  private async resolveContactIdByTelegramId(telegramId: number | string) {
+    const client = await this.sendpulseClient.findOne({
+      where: {telegram_id: String(telegramId)},
+    });
+
+    if (client?.id) {
+      return client.id;
+    }
+
+    const contact = await this.getApi().getByTelegramId(telegramId);
+    if (!contact) {
+      return null;
+    }
+
+    const [savedClient] = await this.saveClient(
+      this.buildWebhookPayloadFromApiContact(contact, telegramId),
+    );
+
+    return savedClient?.id ?? contact.id ?? null;
   }
 
   countReferrals(referralCode: string, telegramId?: number | string) {

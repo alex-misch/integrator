@@ -46,6 +46,8 @@ import {
 import {MiniappYclientsIntegration} from 'src/modules/miniapp/miniapp-yclients.entity';
 import {MiniappService} from 'src/modules/miniapp/miniapp-service.entity';
 import {normalizePhone} from 'src/utils/phone';
+import {SendpulseService} from 'src/modules/integrations/sendpulse/sendpulse.service';
+import dayjs from 'dayjs';
 
 const DEFAULT_BOOKING_SELECTION_BY_COMPANY_ID: Record<
   number,
@@ -64,6 +66,7 @@ export class MiniappsPublicController {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly customerService: TelegramCustomerService,
+    private readonly sendpulse: SendpulseService,
   ) {}
 
   @Get(':slug/:companyId')
@@ -621,6 +624,12 @@ export class MiniappsPublicController {
       yclientsRecordHash: createdRecord.record_hash,
     });
 
+    await this.runSendpulseAppointmentFlow(
+      customer,
+      payload.date,
+      payload.time,
+    );
+
     return this.toPublicBookingDto(updated);
   }
 
@@ -806,7 +815,7 @@ export class MiniappsPublicController {
     }
 
     try {
-      return await this.miniapps.createBooking({
+      const booking = await this.miniapps.createBooking({
         miniapp: props.miniapp,
         customer: props.customer,
         service,
@@ -817,6 +826,14 @@ export class MiniappsPublicController {
         yclientsRecordId: createdRecord.record_id,
         yclientsRecordHash: createdRecord.record_hash,
       });
+
+      await this.runSendpulseAppointmentFlow(
+        props.customer,
+        props.date,
+        props.time,
+      );
+
+      return booking;
     } catch (error) {
       await this.yclients.deleteUserRecord(
         createdRecord.record_id,
@@ -882,6 +899,26 @@ export class MiniappsPublicController {
       2,
       '0',
     )}:${seconds.padStart(2, '0')}`;
+  }
+
+  private async runSendpulseAppointmentFlow(
+    customer: TelegramCustomer,
+    date: string,
+    time: string,
+  ) {
+    await this.sendpulse.runAppointmentBookedFlow(customer.id, {
+      appointment_datetime: this.formatSendpulseAppointmentDateTime(date, time),
+    });
+  }
+
+  private formatSendpulseAppointmentDateTime(date: string, time: string) {
+    const datetime = dayjs(`${date} ${time}`);
+    if (datetime.isValid()) {
+      return datetime.format('DD.MM.YYYY HH:mm');
+    }
+
+    const [hours = '00', minutes = '00'] = time.split(':');
+    return `${date} ${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
   }
 
   private async resolveCustomerYclientsId(
