@@ -9,6 +9,7 @@ import {
   MiniappBooking,
   MiniappBookingStatus,
 } from '../miniapp/miniapp-booking.entity';
+import {MiniappClientRevenue} from './miniapp-client-revenue.entity';
 
 export type DashboardPeriod = '7d' | '30d' | '3m';
 
@@ -26,6 +27,9 @@ export class AnalyticsService {
 
     @InjectRepository(MiniappBooking)
     private readonly bookings: Repository<MiniappBooking>,
+
+    @InjectRepository(MiniappClientRevenue)
+    private readonly miniappRevenue: Repository<MiniappClientRevenue>,
   ) {}
 
   async recordVisit(props: {
@@ -137,12 +141,12 @@ export class AnalyticsService {
         this.countByDay('visit', range.start, range.end),
         this.welcomeReferralTransactionsByDay(range.start, range.end),
         this.referralTransactionsByDay(range.start, range.end),
-        this.referralTransactionPaymentsByDay(range.start, range.end),
+        this.miniappClientPaymentsByDay(range.start, range.end),
       ]);
 
     const [paymentTotal, paymentServices] = await Promise.all([
-      this.sumReferralTransactionPayments(range.start, range.end),
-      this.referralTransactionServices(range.start, range.end),
+      this.sumMiniappClientPayments(range.start, range.end),
+      this.miniappClientRevenueServices(range.start, range.end),
     ]);
 
     return {
@@ -160,6 +164,7 @@ export class AnalyticsService {
         miniapp_bookings_total: miniappBookings.total,
         miniapp_bookings_completed: miniappBookings.completed,
         miniapp_bookings_canceled: miniappBookings.canceled,
+        miniapp_payments_amount: paymentTotal,
         referral_payments_amount: paymentTotal,
       },
       series: this.buildSeries(range.start, range.days, {
@@ -167,6 +172,7 @@ export class AnalyticsService {
         referral_opens: referralsByDay,
         referral_bookings: bookingsByDay,
         referral_payments: paymentsByDay,
+        miniapp_payments: paymentsByDay,
       }),
       payment_services: paymentServices,
     };
@@ -251,6 +257,7 @@ export class AnalyticsService {
         referral_opens: maps.referral_opens.get(key) ?? 0,
         referral_bookings: maps.referral_bookings.get(key) ?? 0,
         referral_payments: maps.referral_payments.get(key) ?? 0,
+        miniapp_payments: maps.miniapp_payments.get(key) ?? 0,
       };
     });
   }
@@ -369,6 +376,24 @@ export class AnalyticsService {
     return new Map(rows.map(row => [row.day, Number(row.value)]));
   }
 
+  private async miniappClientPaymentsByDay(start: Date, end: Date) {
+    const rows = await this.miniappRevenue
+      .createQueryBuilder('revenue')
+      .select(
+        `to_char(date_trunc('day', revenue.happened_at), 'YYYY-MM-DD')`,
+        'day',
+      )
+      .addSelect('COALESCE(SUM(revenue.amount), 0)', 'value')
+      .where('revenue.source = :source', {source: 'payment'})
+      .andWhere('revenue.amount IS NOT NULL')
+      .andWhere('revenue.happened_at BETWEEN :start AND :end', {start, end})
+      .groupBy(`date_trunc('day', revenue.happened_at)`)
+      .orderBy(`date_trunc('day', revenue.happened_at)`, 'ASC')
+      .getRawMany<{day: string; value: string}>();
+
+    return new Map(rows.map(row => [row.day, Number(row.value)]));
+  }
+
   private async referralTransactionPaymentsByDay(start: Date, end: Date) {
     const rows = await this.referralTransactionsQuery()
       .select(
@@ -394,6 +419,18 @@ export class AnalyticsService {
         start,
         end,
       })
+      .getRawOne<{total: string}>();
+
+    return Number(result?.total ?? 0);
+  }
+
+  private async sumMiniappClientPayments(start: Date, end: Date) {
+    const result = await this.miniappRevenue
+      .createQueryBuilder('revenue')
+      .select('COALESCE(SUM(revenue.amount), 0)', 'total')
+      .where('revenue.source = :source', {source: 'payment'})
+      .andWhere('revenue.amount IS NOT NULL')
+      .andWhere('revenue.happened_at BETWEEN :start AND :end', {start, end})
       .getRawOne<{total: string}>();
 
     return Number(result?.total ?? 0);
@@ -442,6 +479,71 @@ export class AnalyticsService {
     return rows.map(row => ({
       id: Number(row.id),
       service_title: row.service_title,
+      amount: row.amount == null ? null : Number(row.amount),
+      date_created: row.date_created,
+    }));
+  }
+
+  private async miniappClientRevenueServices(start: Date, end: Date) {
+    const rows = await this.miniappRevenue
+      .createQueryBuilder('revenue')
+      .select('revenue.id', 'id')
+      .addSelect(
+        `
+          COALESCE(
+            revenue.service_title,
+            CASE
+              WHEN revenue.sold_item_id IS NOT NULL AND revenue.sold_item_type = 'goods_transaction'
+                THEN CONCAT('Товар #', revenue.sold_item_id::text)
+              WHEN revenue.sold_item_id IS NOT NULL
+                THEN CONCAT('Услуга #', revenue.sold_item_id::text)
+              ELSE NULL
+            END
+          )
+        `,
+        'service_title',
+      )
+      .addSelect('revenue.amount', 'amount')
+      .addSelect('revenue.happened_at', 'date_created')
+      .addSelect('revenue.customer_id', 'customer_id')
+      .addSelect('customer.username', 'customer_username')
+      .addSelect('COALESCE(customer.phone, revenue.phone)', 'customer_phone')
+      .addSelect('booking.date', 'booking_date')
+      .addSelect('booking.time', 'booking_time')
+      .leftJoin(
+        TelegramCustomer,
+        'customer',
+        'customer.id = revenue.customer_id',
+      )
+      .leftJoin(
+        MiniappBooking,
+        'booking',
+        'booking.yclients_record_id = revenue.yclients_record_id',
+      )
+      .where('revenue.source = :source', {source: 'payment'})
+      .andWhere('revenue.happened_at BETWEEN :start AND :end', {start, end})
+      .orderBy('revenue.happened_at', 'DESC')
+      .take(8)
+      .getRawMany<{
+        id: string;
+        service_title: string | null;
+        amount: string | null;
+        date_created: Date;
+        customer_id: string | null;
+        customer_username: string | null;
+        customer_phone: string | null;
+        booking_date: string | null;
+        booking_time: string | null;
+      }>();
+
+    return rows.map(row => ({
+      id: Number(row.id),
+      service_title: row.service_title,
+      customer_id: row.customer_id == null ? null : Number(row.customer_id),
+      customer_username: row.customer_username,
+      customer_phone: row.customer_phone,
+      booking_date: row.booking_date,
+      booking_time: row.booking_time,
       amount: row.amount == null ? null : Number(row.amount),
       date_created: row.date_created,
     }));

@@ -36,6 +36,7 @@ import {SendpulseLog} from 'src/modules/integrations/sendpulse/sendpulse-logs.en
 import {LoyaltyTransaction} from 'src/modules/customer-loyalty/loyalty-transaction.entity';
 import {YclientsEvent} from 'src/modules/customer-loyalty/yclients-event.entity';
 import {AnalyticsEvent} from 'src/modules/analytics/analytics-event.entity';
+import {MiniappClientRevenue} from 'src/modules/analytics/miniapp-client-revenue.entity';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import {AnalyticsEvent} from 'src/modules/analytics/analytics-event.entity';
         LoyaltyTransaction,
         YclientsEvent,
         AnalyticsEvent,
+        MiniappClientRevenue,
       ],
       migrations: ['dist/migrations/*.js'],
       synchronize: false,

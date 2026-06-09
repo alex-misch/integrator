@@ -53,6 +53,7 @@ type DashboardData = {
     miniapp_bookings_total: number;
     miniapp_bookings_completed: number;
     miniapp_bookings_canceled: number;
+    miniapp_payments_amount: number;
     referral_payments_amount: number;
   };
   series: Array<{
@@ -61,10 +62,16 @@ type DashboardData = {
     referral_opens: number;
     referral_bookings: number;
     referral_payments: number;
+    miniapp_payments: number;
   }>;
   payment_services: Array<{
     id: number;
     service_title: string | null;
+    customer_id: number | null;
+    customer_username: string | null;
+    customer_phone: string | null;
+    booking_date: string | null;
+    booking_time: string | null;
     amount: number | null;
     date_created: string;
   }>;
@@ -304,14 +311,14 @@ export default function DashboardPage() {
               <CardTitle className="flex items-center gap-2">
                 <span className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5 text-emerald-600" />
-                  Оплаты рефералов
+                  Оплаты клиентов
                 </span>
                 <span className="ml-auto text-2xl font-semibold">
-                  {ruble.format(data?.totals.referral_payments_amount ?? 0)}
+                  {ruble.format(data?.totals.miniapp_payments_amount ?? 0)}
                 </span>
               </CardTitle>
               <CardDescription>
-                {ruble.format(data?.totals.referral_payments_amount ?? 0)} за
+                {ruble.format(data?.totals.miniapp_payments_amount ?? 0)} за
                 выбранный период.
               </CardDescription>
             </CardHeader>
@@ -338,7 +345,7 @@ export default function DashboardPage() {
                   />
                   <Area
                     type="monotone"
-                    dataKey="referral_payments"
+                    dataKey="miniapp_payments"
                     stroke="#16a34a"
                     fill="url(#payments)"
                     strokeWidth={2}
@@ -352,7 +359,7 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle>Услуги и суммы</CardTitle>
               <CardDescription>
-                Последние отфильтрованные оплаты от рефералов.
+                Последние оплаты клиентов из miniapp-аудитории.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -360,7 +367,9 @@ export default function DashboardPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Услуга</TableHead>
-                    <TableHead>Дата</TableHead>
+                    <TableHead>Дата оплаты</TableHead>
+                    <TableHead>Дата записи</TableHead>
+                    <TableHead>Клиент</TableHead>
                     <TableHead className="text-right">Сумма</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -371,7 +380,13 @@ export default function DashboardPage() {
                         {item.service_title || 'Услуга из YClients'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(item.date_created)}
+                        {formatDateTime(item.date_created)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatBookingDateTime(item)}
+                      </TableCell>
+                      <TableCell className="max-w-40 truncate text-muted-foreground">
+                        {formatClient(item)}
                       </TableCell>
                       <TableCell className="text-right">
                         {ruble.format(item.amount ?? 0)}
@@ -380,10 +395,10 @@ export default function DashboardPage() {
                   ))}
                   {!isLoading && !data?.payment_services.length ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={3}
-                        className="h-24 text-center text-muted-foreground"
-                      >
+	                      <TableCell
+	                        colSpan={5}
+	                        className="h-24 text-center text-muted-foreground"
+	                      >
                         Оплат за период нет
                       </TableCell>
                     </TableRow>
@@ -486,4 +501,34 @@ function formatDate(value: string) {
     month: 'short',
     year: 'numeric',
   });
+}
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatBookingDateTime(item: DashboardData['payment_services'][number]) {
+  if (!item.booking_date) {
+    return '—';
+  }
+
+  const time = item.booking_time
+    ? item.booking_time.split(':').slice(0, 2).join(':')
+    : null;
+
+  return [formatDate(item.booking_date), time].filter(Boolean).join(', ');
+}
+
+function formatClient(item: DashboardData['payment_services'][number]) {
+  if (item.customer_username) {
+    return `@${item.customer_username}`;
+  }
+
+  return item.customer_phone || (item.customer_id ? `tg ${item.customer_id}` : '—');
 }

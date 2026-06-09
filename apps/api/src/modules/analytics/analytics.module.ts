@@ -5,6 +5,8 @@ import {AnalyticsService} from './analytics.service';
 import {TelegramCustomer} from '../telegram/telegram-customer.entity';
 import {LoyaltyTransaction} from '../customer-loyalty/loyalty-transaction.entity';
 import {MiniappBooking} from '../miniapp/miniapp-booking.entity';
+import {MiniappClientRevenue} from './miniapp-client-revenue.entity';
+import {MiniappClientRevenueService} from './miniapp-client-revenue.service';
 
 @Module({
   imports: [
@@ -13,9 +15,10 @@ import {MiniappBooking} from '../miniapp/miniapp-booking.entity';
       TelegramCustomer,
       LoyaltyTransaction,
       MiniappBooking,
+      MiniappClientRevenue,
     ]),
   ],
-  providers: [AnalyticsService],
-  exports: [AnalyticsService],
+  providers: [AnalyticsService, MiniappClientRevenueService],
+  exports: [AnalyticsService, MiniappClientRevenueService],
 })
 export class AnalyticsModule {}

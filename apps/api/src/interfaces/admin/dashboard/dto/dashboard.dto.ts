@@ -23,6 +23,9 @@ export class DashboardSeriesItem {
 
   @ApiProperty({example: 12000})
   referral_payments: number;
+
+  @ApiProperty({example: 12000})
+  miniapp_payments: number;
 }
 
 export class DashboardPaymentService {
@@ -31,6 +34,21 @@ export class DashboardPaymentService {
 
   @ApiProperty({example: 'Лазерная эпиляция'})
   service_title: string | null;
+
+  @ApiProperty({example: 123456789, nullable: true})
+  customer_id: number | null;
+
+  @ApiProperty({example: 'username', nullable: true})
+  customer_username: string | null;
+
+  @ApiProperty({example: '+79031111111', nullable: true})
+  customer_phone: string | null;
+
+  @ApiProperty({example: '2026-05-14', nullable: true})
+  booking_date: string | null;
+
+  @ApiProperty({example: '10:00', nullable: true})
+  booking_time: string | null;
 
   @ApiProperty({example: 4500})
   amount: number | null;
@@ -58,6 +76,7 @@ export class DashboardCountersResponse {
       miniapp_bookings_total: 33,
       miniapp_bookings_completed: 21,
       miniapp_bookings_canceled: 4,
+      miniapp_payments_amount: 45000,
       referral_payments_amount: 45000,
     },
   })
@@ -69,6 +88,7 @@ export class DashboardCountersResponse {
     miniapp_bookings_total: number;
     miniapp_bookings_completed: number;
     miniapp_bookings_canceled: number;
+    miniapp_payments_amount: number;
     referral_payments_amount: number;
   };
 

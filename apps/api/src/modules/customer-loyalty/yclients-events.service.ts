@@ -1,4 +1,4 @@
-import {Injectable} from '@nestjs/common';
+import {Injectable, Logger} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {QueryFailedError, Repository} from 'typeorm';
 import {normalizePhone} from 'src/utils/phone';
@@ -12,6 +12,7 @@ import {
   getYclientsRecordIdFromPayload,
   mapYclientsRecordPayloadToBookingStatus,
 } from './yclients-record-status';
+import {MiniappClientRevenueService} from '../analytics/miniapp-client-revenue.service';
 
 type WebhookSaveResult =
   | {
@@ -32,6 +33,8 @@ type ReferredCustomerContext = {
 
 @Injectable()
 export class YclientsEventsService {
+  private readonly logger = new Logger(YclientsEventsService.name);
+
   constructor(
     @InjectRepository(YclientsEvent)
     private readonly events: Repository<YclientsEvent>,
@@ -46,6 +49,7 @@ export class YclientsEventsService {
     private readonly bookings: Repository<MiniappBooking>,
 
     private readonly analytics: AnalyticsService,
+    private readonly miniappClientRevenue: MiniappClientRevenueService,
   ) {}
 
   async saveWebhookEvent(
@@ -87,6 +91,7 @@ export class YclientsEventsService {
       );
 
       await this.syncMiniappBookingStatusFromYclients(payload);
+      await this.syncMiniappClientRevenue(event, payload);
 
       await this.recordAnalyticsEvent({
         payload,
@@ -113,6 +118,7 @@ export class YclientsEventsService {
       }
 
       await this.syncMiniappBookingStatusFromYclients(payload);
+      await this.syncMiniappClientRevenue(duplicate, payload);
 
       await this.recordAnalyticsEvent({
         payload,
@@ -128,6 +134,20 @@ export class YclientsEventsService {
         event_id: duplicate.id,
         event_name: duplicate.event_name,
       };
+    }
+  }
+
+  private async syncMiniappClientRevenue(
+    event: YclientsEvent,
+    payload: YClientRequest,
+  ) {
+    try {
+      await this.miniappClientRevenue.syncFromYclientsEvent(event, payload);
+    } catch (error) {
+      this.logger.error(
+        `Failed to sync miniapp client revenue for yclients_event_id=${event.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
   }
 
